@@ -36,7 +36,7 @@ namespace Raft.Peer.Models
         public ServerState ServerState { get; set; } = ServerState.Follower;
         public int? LeaderId { get; set; } = null;
         // }
-        public ConsensusPersistentState PersistentState { get; set; }
+        public ConsensusPersistentState PersistentState { get; set; } = new();
         /// <summary>
         /// index of highest log entry known to be committed (initialized to 0, increases monotonically)
         /// </summary>

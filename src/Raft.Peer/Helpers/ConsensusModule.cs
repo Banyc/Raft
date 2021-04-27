@@ -44,9 +44,13 @@ namespace Raft.Peer.Helpers
             this.timerElectionTimeout.Elapsed += TimerElectionTimeout_Elapsed;
             this.timerHeartbeatTimeout.Elapsed += TimerHeartbeatTimeout_Elapsed;
 
-            ConditionalInitiateTimerElectionTimeout();
             // }
 
+        }
+
+        public void Start()
+        {
+            ConditionalInitiateTimerElectionTimeout();
         }
 
         private void InitiateLeaderState()
