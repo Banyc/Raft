@@ -7,3 +7,6 @@ In this lab you'll implement Raft as a Go object type with associated methods, m
 ## References
 
 -   <https://pdos.csail.mit.edu/6.824/labs/lab-raft.html>
+-   <http://thesecretlivesofdata.com/raft/>
+-   <https://medium.com/@arpith/raft-electing-a-leader-4062a3eea068>
+    -   code
