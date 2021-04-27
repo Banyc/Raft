@@ -41,25 +41,27 @@ namespace Raft.Peer.Tests
 
         private async Task<AppendEntriesReply> AppendEntriesAsyncEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments, CancellationToken cancellationToken)
         {
-            Console.WriteLine($"[appendEntries] {arguments.LeaderId} |->  {targetPeerId}");
+            Console.WriteLine($"[appendEntries] {arguments.LeaderId} |-->  {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
-            Console.WriteLine($"[appendEntries] {arguments.LeaderId}  ->| {targetPeerId}");
+            Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->| {targetPeerId}");
             var reply = consensusModules[targetPeerId].AppendEntries(arguments);
-            Console.WriteLine($"[appendEntries] {arguments.LeaderId}  <-| {targetPeerId}");
+            string statusChar = reply.Success ? "+" : "x";
+            Console.WriteLine($"[appendEntries] {arguments.LeaderId}  <{statusChar}-| {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
-            Console.WriteLine($"[appendEntries] {arguments.LeaderId} |<-  {targetPeerId}");
+            Console.WriteLine($"[appendEntries] {arguments.LeaderId} |<{statusChar}-  {targetPeerId}");
             return reply;
         }
 
         private async Task<RequestVoteReply> RequestVoteAsyncEventHandler(ConsensusModule sender, int targetPeerId, RequestVoteArgs arguments, CancellationToken cancellationToken)
         {
-            Console.WriteLine($"[requestVote] {arguments.CandidateId} |->  {targetPeerId}");
+            Console.WriteLine($"[requestVote] {arguments.CandidateId} |-->  {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
-            Console.WriteLine($"[requestVote] {arguments.CandidateId}  ->| {targetPeerId}");
+            Console.WriteLine($"[requestVote] {arguments.CandidateId}  -->| {targetPeerId}");
             var reply = consensusModules[targetPeerId].RequestVote(arguments);
-            Console.WriteLine($"[requestVote] {arguments.CandidateId}  <-| {targetPeerId}");
+            string statusChar = reply.VoteGranted ? "+" : "x";
+            Console.WriteLine($"[requestVote] {arguments.CandidateId}  <{statusChar}-| {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
-            Console.WriteLine($"[requestVote] {arguments.CandidateId} |<-  {targetPeerId}");
+            Console.WriteLine($"[requestVote] {arguments.CandidateId} |<{statusChar}-  {targetPeerId}");
             return reply;
         }
 

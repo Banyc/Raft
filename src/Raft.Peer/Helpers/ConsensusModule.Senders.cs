@@ -209,13 +209,11 @@ namespace Raft.Peer.Helpers
                         if (this.state.PersistentState.VoteCount > this.settings.PeerCount / 2)
                         {
                             // this candidate has gained majority votes.
-                            this.state.ServerState = ServerState.Leader;
                             // reinitialize after election
-                            InitiateLeaderState();
                             // send heartbeats before any other server time out.
                             // establish authority
                             // prevent new elections
-                            DoAppendEntries();
+                            BecomeLeader();
                         }
                     }
                 });

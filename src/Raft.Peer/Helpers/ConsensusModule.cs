@@ -53,8 +53,10 @@ namespace Raft.Peer.Helpers
             ConditionalInitiateTimerElectionTimeout();
         }
 
-        private void InitiateLeaderState()
+        private void BecomeLeader()
         {
+            this.state.ServerState = ServerState.Leader;
+            this.timerElectionTimeout.Stop();
             this.state.NextIndex.Clear();
             this.state.MatchIndex.Clear();
             int lastLogIndex = this.state.PersistentState.Log.Count - 1;
@@ -64,6 +66,10 @@ namespace Raft.Peer.Helpers
                 this.state.NextIndex.Add(lastLogIndex + 1);
                 this.state.MatchIndex.Add(0);
             }
+            // send heartbeats before any other server time out.
+            // establish authority
+            // prevent new elections
+            DoAppendEntries();
         }
 
         private void InitiateTimerElectionTimeoutInterval()
