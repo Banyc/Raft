@@ -26,22 +26,31 @@ namespace Raft.Peer.Helpers
 
         private async Task DoAppendEntriesWithFollowerIndexAsync(int followerIndex)
         {
-            int prevLogIndex = this.state.NextIndex[followerIndex] - 1;
-            AppendEntriesArgs args = new()
+            AppendEntriesArgs args;
+            lock (this)
             {
-                Entries = null,
-                Term = this.state.PersistentState.CurrentTerm,
-                LeaderId = this.settings.ThisPeerId,
-                LeaderCommit = this.state.CommitIndex,
-                PrevLogIndex = prevLogIndex,
-                PrevLogTerm = this.state.PersistentState.Log[prevLogIndex].Term,
-            };
-            // set entries
-            if (this.state.PersistentState.Log.Count - 1 >= this.state.NextIndex[followerIndex])
-            {
-                args.Entries = this.state.PersistentState.Log
-                    .Skip(this.state.NextIndex[followerIndex])
-                    .ToList();
+                int prevLogIndex = this.state.NextIndex[followerIndex] - 1;
+                int prevLogTerm = -1;
+                if (prevLogIndex >= 0)
+                {
+                    prevLogTerm = this.state.PersistentState.Log[prevLogIndex].Term;
+                }
+                args = new()
+                {
+                    Entries = null,
+                    Term = this.state.PersistentState.CurrentTerm,
+                    LeaderId = this.settings.ThisPeerId,
+                    LeaderCommit = this.state.CommitIndex,
+                    PrevLogIndex = prevLogIndex,
+                    PrevLogTerm = prevLogTerm,
+                };
+                // set entries
+                if (this.state.PersistentState.Log.Count - 1 >= this.state.NextIndex[followerIndex])
+                {
+                    args.Entries = this.state.PersistentState.Log
+                        .Skip(this.state.NextIndex[followerIndex])
+                        .ToList();
+                }
             }
             // TODO: timeout exception => release threads
             // if timeout and have logs, no re-send
@@ -50,9 +59,8 @@ namespace Raft.Peer.Helpers
             AppendEntriesReply reply = await task;
             if (reply.Term > this.state.PersistentState.CurrentTerm)
             {
-                this.state.PersistentState.CurrentTerm = reply.Term;
                 // step down
-                StepDown();
+                StepDown(reply.Term);
                 return;
             }
             if (reply.Success)
@@ -145,9 +153,8 @@ namespace Raft.Peer.Helpers
                         }
                         if (reply.Term > this.state.PersistentState.CurrentTerm)
                         {
-                            this.state.PersistentState.CurrentTerm = reply.Term;
                             // step down
-                            StepDown();
+                            StepDown(reply.Term);
                             return;
                         }
                         if (this.state.ServerState != ServerState.Candidate ||

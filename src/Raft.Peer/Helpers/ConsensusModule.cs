@@ -94,9 +94,10 @@ namespace Raft.Peer.Helpers
                 (b - a) * x + a;
         }
 
-        private void StepDown()
+        private void StepDown(int newTerm)
         {
             this.state.ServerState = ServerState.Follower;
+            this.state.PersistentState.CurrentTerm = newTerm;
             this.timerHeartbeatTimeout.Stop();
         }
 
