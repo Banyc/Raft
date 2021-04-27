@@ -70,6 +70,7 @@ namespace Raft.Peer.Helpers
             // establish authority
             // prevent new elections
             DoAppendEntries();
+            this.timerHeartbeatTimeout.Start();
         }
 
         private void InitiateTimerElectionTimeoutInterval()

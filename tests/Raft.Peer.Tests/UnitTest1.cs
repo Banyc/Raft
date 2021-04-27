@@ -76,6 +76,9 @@ namespace Raft.Peer.Tests
                 {
                     PeerCount = peerCount,
                     ThisPeerId = i,
+                    TimerHeartbeatTimeout = TimeSpan.FromMilliseconds(50),
+                    TimerElectionTimeoutHigherBound = TimeSpan.FromMilliseconds(10001),
+                    TimerElectionTimeoutLowerBound = TimeSpan.FromMilliseconds(10000),
                 };
                 (ConsensusModule consensus, ConsensusStateMachine stateMachine) =
                     BuildConsensusModule(settings);
