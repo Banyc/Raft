@@ -23,6 +23,7 @@ namespace Raft.Peer.Helpers
                     // term of the previous log must match
                     !
                     (
+                        arguments.PrevLogIndex > 0 &&
                         arguments.PrevLogIndex < this.state.PersistentState.Log.Count &&
                         this.state.PersistentState.Log[arguments.PrevLogIndex].Term ==
                             arguments.PrevLogTerm
@@ -35,7 +36,8 @@ namespace Raft.Peer.Helpers
                     // candidate state unchanged
 
                     // remove the conflict logs
-                    if (arguments.PrevLogIndex < this.state.PersistentState.Log.Count &&
+                    if (arguments.PrevLogIndex > 0 &&
+                        arguments.PrevLogIndex < this.state.PersistentState.Log.Count &&
                         this.state.PersistentState.Log[arguments.PrevLogIndex].Term !=
                             arguments.Term)
                     {
@@ -64,11 +66,7 @@ namespace Raft.Peer.Helpers
                 }
 
                 // update state machine
-                while (this.state.CommitIndex > this.state.LastApplied)
-                {
-                    this.stateMachine.Apply(this.state.PersistentState.Log[this.state.LastApplied + 1].Command);
-                    this.state.LastApplied++;
-                }
+                UpdateStateMachine();
                 // concede to the new term
                 if (this.state.PersistentState.CurrentTerm < arguments.Term ||
                     // new leader -> this candidate => this convert to follower

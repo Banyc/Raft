@@ -28,7 +28,7 @@ namespace Raft.Peer.Models
         /// log entries to store
         ///   (empty for heartbeat; may send more than one for efficiency)
         /// </summary>
-        public List<ConsensusEntry> Entries { get; set; }
+        public List<ConsensusEntry> Entries { get; set; } = new();
         /// <summary>
         /// leader’s commitIndex
         /// </summary>

@@ -16,7 +16,7 @@ namespace Raft.Peer.Tests
         [Fact]
         public void Test()
         {
-            int peerCount = 5;
+            int peerCount = 2;
 
             (List<ConsensusModule> consensusModules, List<ConsensusStateMachine> stateMachines)
                 = BuildConsensusModules(peerCount);
@@ -42,11 +42,11 @@ namespace Raft.Peer.Tests
         private async Task<AppendEntriesReply> AppendEntriesAsyncEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments, CancellationToken cancellationToken)
         {
             Console.WriteLine($"[appendEntries] {arguments.LeaderId} |-> {targetPeerId}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(10, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
             Console.WriteLine($"[appendEntries] {arguments.LeaderId} ->| {targetPeerId}");
             var reply = consensusModules[targetPeerId].AppendEntries(arguments);
             Console.WriteLine($"[appendEntries] {arguments.LeaderId} <-| {targetPeerId}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(10, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
             Console.WriteLine($"[appendEntries] {arguments.LeaderId} |<- {targetPeerId}");
             return reply;
         }
@@ -54,11 +54,11 @@ namespace Raft.Peer.Tests
         private async Task<RequestVoteReply> RequestVoteAsyncEventHandler(ConsensusModule sender, int targetPeerId, RequestVoteArgs arguments, CancellationToken cancellationToken)
         {
             Console.WriteLine($"[requestVote] {arguments.CandidateId} |-> {targetPeerId}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(10, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
             Console.WriteLine($"[requestVote] {arguments.CandidateId} ->| {targetPeerId}");
             var reply = consensusModules[targetPeerId].RequestVote(arguments);
             Console.WriteLine($"[requestVote] {arguments.CandidateId} <-| {targetPeerId}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(10, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
             Console.WriteLine($"[requestVote] {arguments.CandidateId} |<- {targetPeerId}");
             return reply;
         }

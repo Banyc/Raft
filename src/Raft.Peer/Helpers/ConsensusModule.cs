@@ -101,6 +101,16 @@ namespace Raft.Peer.Helpers
             this.timerHeartbeatTimeout.Stop();
         }
 
+        private void UpdateStateMachine()
+        {
+            // update state machine
+            while (this.state.CommitIndex > this.state.LastApplied)
+            {
+                this.stateMachine.Apply(this.state.PersistentState.Log[this.state.LastApplied + 1].Command);
+                this.state.LastApplied++;
+            }
+        }
+
         // candidate -{requestVote}-> followers
         // this := candidate
         private void TimerElectionTimeout_Elapsed(object sender, ElapsedEventArgs e)
