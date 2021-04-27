@@ -139,11 +139,6 @@ namespace Raft.Peer.Helpers
 
         private async void DoRequestVote()
         {
-            RequestVoteArgs args = new()
-            {
-                CandidateId = this.settings.ThisPeerId,
-                Term = this.state.PersistentState.CurrentTerm,
-            };
             List<Task> tasks = new();
             int i;
             for (i = 0; i < this.settings.PeerCount; i++)
@@ -155,12 +150,22 @@ namespace Raft.Peer.Helpers
                 int peerIndex = i;
                 Task task = Task.Run(async () =>
                 {
-                    // TODO: timeout exception => release threads
-                    // if timeout, must re-send
+                    RequestVoteArgs args;
+                    int initialTerm;
+                    lock (this)
+                    {
+                        args = new()
+                        {
+                            CandidateId = this.settings.ThisPeerId,
+                            Term = this.state.PersistentState.CurrentTerm,
+                        };
+                        initialTerm = this.state.PersistentState.CurrentTerm;
+                    }
                     RequestVoteReply reply = null;
-                    int initialTerm = this.state.PersistentState.CurrentTerm;
                     do
                     {
+                        // TODO: timeout exception => release threads
+                        // if timeout, must re-send
                         var tokenSource = new CancellationTokenSource();
                         Task<RequestVoteReply> requestTask = this.SendRequestVoteAsync(this, peerIndex, args, tokenSource.Token);
                         if (await Task.WhenAny(
