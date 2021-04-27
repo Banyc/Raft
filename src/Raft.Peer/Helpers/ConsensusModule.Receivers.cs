@@ -20,13 +20,18 @@ namespace Raft.Peer.Helpers
                 if (
                     // term must match
                     arguments.Term < this.state.PersistentState.CurrentTerm ||
-                    // term of the previous log must match
                     !
+                    // conditions that cause a success
                     (
-                        arguments.PrevLogIndex > 0 &&
-                        arguments.PrevLogIndex < this.state.PersistentState.Log.Count &&
-                        this.state.PersistentState.Log[arguments.PrevLogIndex].Term ==
-                            arguments.PrevLogTerm
+                        // log still empty
+                        arguments.PrevLogIndex == 0 ||
+                        // term of the previous log must match
+                        (
+                            arguments.PrevLogIndex > 0 &&
+                            arguments.PrevLogIndex < this.state.PersistentState.Log.Count &&
+                            this.state.PersistentState.Log[arguments.PrevLogIndex].Term ==
+                                arguments.PrevLogTerm
+                        )
                     )
                 )
                 {
