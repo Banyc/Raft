@@ -77,6 +77,8 @@ namespace Raft.Peer.Tests
                 };
                 (ConsensusModule consensus, ConsensusStateMachine stateMachine) =
                     BuildConsensusModule(settings);
+                consensusModules.Add(consensus);
+                stateMachines.Add(stateMachine);
             }
             return (consensusModules, stateMachines);
         }

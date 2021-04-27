@@ -6,6 +6,7 @@ namespace Raft.Peer.Models
         Follower,
         Candidate,
         Leader,
+        Dead,
     }
 
     // (Updated on stable storage before responding to RPCs)
