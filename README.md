@@ -11,3 +11,8 @@ In this lab you'll implement Raft as a Go object type with associated methods, m
 -   sample code
     -   <https://medium.com/@arpith/raft-electing-a-leader-4062a3eea068>
     -   <https://eli.thegreenplace.net/2020/implementing-raft-part-2-commands-and-log-replication/>
+
+## Known Issues
+
+-   Follower unexpectedly adding duplicated entries.
+-   The election timeout timer never fire when all peers are candidates.
