@@ -19,11 +19,11 @@ namespace Raft.Peer.Tests
         private readonly bool isShowHeartbeatDebugMessage = false;
 
         [Fact]
-        public void Test()
+        public async void Test()
         {
             int peerCount = 5;
 
-            (List<ConsensusModule> consensusModules, List<ConsensusStateMachine> stateMachines)
+            (List<ConsensusModule> consensusModules, List<ConsensusModuleStatesMachine> stateMachines)
                 = BuildConsensusModules(peerCount);
             this.consensusModules = consensusModules;
 
@@ -35,7 +35,7 @@ namespace Raft.Peer.Tests
 
             foreach (var consensus in consensusModules)
             {
-                consensus.Start();
+                await consensus.StartAsync();
             }
 
             // Submit(consensusModules);
@@ -107,7 +107,7 @@ namespace Raft.Peer.Tests
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} |-->  {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->| {targetPeerId}");
-            var reply = consensusModules[targetPeerId].AppendEntries(arguments);
+            var reply = await consensusModules[targetPeerId].AppendEntriesAsync(arguments);
             string statusChar = reply.Success ? "+" : "x";
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  <{statusChar}-| {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
@@ -120,7 +120,7 @@ namespace Raft.Peer.Tests
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term} |-->  {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  -->| {targetPeerId}");
-            var reply = consensusModules[targetPeerId].RequestVote(arguments);
+            var reply = await consensusModules[targetPeerId].RequestVoteAsync(arguments);
             string statusChar = reply.VoteGranted ? "+" : "x";
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  <{statusChar}-| {targetPeerId}.{reply.Term}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
@@ -128,14 +128,14 @@ namespace Raft.Peer.Tests
             return reply;
         }
 
-        private (List<ConsensusModule>, List<ConsensusStateMachine>) BuildConsensusModules(int peerCount)
+        private (List<ConsensusModule>, List<ConsensusModuleStatesMachine>) BuildConsensusModules(int peerCount)
         {
             List<ConsensusModule> consensusModules = new();
-            List<ConsensusStateMachine> stateMachines = new();
+            List<ConsensusModuleStatesMachine> stateMachines = new();
             int i;
             for (i = 0; i < peerCount; i++)
             {
-                ConsensusSettings settings = new()
+                ConsensusModuleSettings settings = new()
                 {
                     PeerCount = peerCount,
                     ThisPeerId = i,
@@ -143,18 +143,23 @@ namespace Raft.Peer.Tests
                     // TimerElectionTimeoutHigherBound = TimeSpan.FromMilliseconds(10001),
                     // TimerElectionTimeoutLowerBound = TimeSpan.FromMilliseconds(9000),
                 };
-                (ConsensusModule consensus, ConsensusStateMachine stateMachine) =
-                    BuildConsensusModule(settings);
+                JsonPersistenceSettings settingsPersistence = new()
+                {
+                    PersistenceFilePath = $"persistence.{i}.json"
+                };
+                (ConsensusModule consensus, ConsensusModuleStatesMachine stateMachine) =
+                    BuildConsensusModule(settings, settingsPersistence);
                 consensusModules.Add(consensus);
                 stateMachines.Add(stateMachine);
             }
             return (consensusModules, stateMachines);
         }
 
-        private (ConsensusModule, ConsensusStateMachine) BuildConsensusModule(ConsensusSettings settings)
+        private (ConsensusModule, ConsensusModuleStatesMachine) BuildConsensusModule(ConsensusModuleSettings settings, JsonPersistenceSettings settingsPersistence)
         {
-            ConsensusStateMachine stateMachine = new();
-            ConsensusModule consensus = new(settings, stateMachine);
+            ConsensusModuleStatesMachine stateMachine = new();
+            JsonPersistence<ConsensusModulePersistentState> persistence = new(settingsPersistence);
+            ConsensusModule consensus = new(settings, stateMachine, persistence);
             return (consensus, stateMachine);
         }
     }

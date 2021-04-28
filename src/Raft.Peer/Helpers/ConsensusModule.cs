@@ -11,12 +11,13 @@ namespace Raft.Peer.Helpers
 {
     public partial class ConsensusModule
     {
-        private readonly ConsensusState state = new();
+        private readonly ConsensusModuleStates state = new();
         // The election timeout is the amount of time a follower waits until becoming a candidate.
         private readonly System.Timers.Timer timerElectionTimeout = new();
-        private readonly ConsensusSettings settings;
-        private readonly ConsensusStateMachine stateMachine;
+        private readonly ConsensusModuleSettings settings;
+        private readonly ConsensusModuleStatesMachine stateMachine;
         private readonly Random random = new();
+        private readonly JsonPersistence<ConsensusModulePersistentState> persistence;
 
         // public delegate AppendEntriesReply AppendEntriesEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments);
         // public event AppendEntriesEventHandler SendAppendEntries;
@@ -28,10 +29,11 @@ namespace Raft.Peer.Helpers
         public delegate Task<RequestVoteReply> RequestVoteAsyncEventHandler(ConsensusModule sender, int targetPeerId, RequestVoteArgs arguments, CancellationToken cancellationToken);
         public event RequestVoteAsyncEventHandler SendRequestVoteAsync;
 
-        public ConsensusModule(ConsensusSettings settings, ConsensusStateMachine stateMachine)
+        public ConsensusModule(ConsensusModuleSettings settings, ConsensusModuleStatesMachine stateMachine, JsonPersistence<ConsensusModulePersistentState> persistence)
         {
             this.settings = settings;
             this.stateMachine = stateMachine;
+            this.persistence = persistence;
 
             // timer {
             this.timerElectionTimeout.AutoReset = false;
@@ -41,8 +43,13 @@ namespace Raft.Peer.Helpers
             // }
         }
 
-        public void Start()
+        public async Task StartAsync()
         {
+            var persistentState = await persistence.LoadAsync();
+            if (persistentState != default)
+            {
+                this.state.PersistentState = persistentState;
+            }
             ConditionalInitiateTimerElectionTimeout();
         }
 
@@ -98,6 +105,7 @@ namespace Raft.Peer.Helpers
 
         private void StepDown(int newTerm)
         {
+            // TODO: review: the persistent state does not seem to require persistence
             if (newTerm > this.state.PersistentState.CurrentTerm)
             {
                 // now vote for the new term
@@ -125,6 +133,7 @@ namespace Raft.Peer.Helpers
         {
             lock (this)
             {
+                // TODO: review: currentTerm and voteFor do not seem to require persistence
                 // After the election timeout the follower becomes a candidate
                 this.state.ServerState = ServerState.Candidate;
                 // and starts a new election term...

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 namespace Raft.Peer.Helpers
 {
-    public class ConsensusStateMachine
+    public class ConsensusModuleStatesMachine
     {
         public Dictionary<string, int> Map { get; set; }
 

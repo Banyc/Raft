@@ -1,7 +1,7 @@
 using System;
 namespace Raft.Peer.Models
 {
-    public class ConsensusSettings
+    public class ConsensusModuleSettings
     {
         // The election timeout is the amount of time a follower waits until becoming a candidate.
         public TimeSpan TimerElectionTimeoutLowerBound { get; set; } = TimeSpan.FromMilliseconds(150);

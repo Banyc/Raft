@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Raft.Peer.Models;
 
 namespace Raft.Peer.Helpers
@@ -9,14 +10,14 @@ namespace Raft.Peer.Helpers
         //   - replicate log entries
         //   - heartbeat
         // this := follower
-        public AppendEntriesReply AppendEntries(AppendEntriesArgs arguments)
+        public async Task<AppendEntriesReply> AppendEntriesAsync(AppendEntriesArgs arguments)
         {
             // possible to receive duplicated appendEntries due to the reply not reaching the leader.
+            AppendEntriesReply result = new();
+            Task persistenceTask = null;
             lock (this)
             {
                 this.timerElectionTimeout.Stop();
-
-                AppendEntriesReply result = new();
 
                 if (
                     // term must match
@@ -61,6 +62,7 @@ namespace Raft.Peer.Helpers
                     this.state.LeaderId = arguments.LeaderId;
 
                     // append new entries
+                    bool isSavePersistentStateLater = false;
                     int i;
                     for (i = 0; i < arguments.Entries.Count; i++)
                     {
@@ -74,6 +76,12 @@ namespace Raft.Peer.Helpers
                         {
                             this.state.PersistentState.Log.Add(entry);
                         }
+                        isSavePersistentStateLater = true;
+                    }
+                    // save
+                    if (isSavePersistentStateLater)
+                    {
+                        persistenceTask = this.persistence.SaveAsync(this.state.PersistentState);
                     }
 
                     // commit
@@ -107,19 +115,24 @@ namespace Raft.Peer.Helpers
                 result.Term = this.state.PersistentState.CurrentTerm;
 
                 ConditionalInitiateTimerElectionTimeout();
-                return result;
             }
+            // wait saving
+            if (persistenceTask != null)
+            {
+                await persistenceTask;
+            }
+            return result;
         }
 
         // candidate -> followers
         // this := follower
-        public RequestVoteReply RequestVote(RequestVoteArgs arguments)
+        public async Task<RequestVoteReply> RequestVoteAsync(RequestVoteArgs arguments)
         {
+            RequestVoteReply result = new();
+            Task persistenceTask = null;
             lock (this)
             {
                 this.timerElectionTimeout.Stop();
-
-                RequestVoteReply result = new();
 
                 if (arguments.Term < this.state.PersistentState.CurrentTerm)
                 {
@@ -153,14 +166,20 @@ namespace Raft.Peer.Helpers
                     if (result.VoteGranted)
                     {
                         this.state.PersistentState.VotedFor = arguments.CandidateId;
+                        persistenceTask = this.persistence.SaveAsync(this.state.PersistentState);
                     }
                 }
 
                 result.Term = this.state.PersistentState.CurrentTerm;
 
                 ConditionalInitiateTimerElectionTimeout();
-                return result;
             }
+            // wait saving
+            if (persistenceTask != null)
+            {
+                await persistenceTask;
+            }
+            return result;
         }
 
         // no guarante to be committed

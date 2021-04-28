@@ -10,7 +10,7 @@ namespace Raft.Peer.Models
     }
 
     // (Updated on stable storage before responding to RPCs)
-    public class ConsensusPersistentState
+    public class ConsensusModulePersistentState
     {
         /// <summary>
         /// latest term server has seen
@@ -27,17 +27,18 @@ namespace Raft.Peer.Models
         /// </summary>
         public List<ConsensusEntry> Log { get; set; } = new() { null };
         // {
+            // TODO: review: voteCount does not seem to be persisted
         public int VoteCount { get; set; } = 0;
         // }
     }
 
-    public class ConsensusState
+    public class ConsensusModuleStates
     {
         // {
         public ServerState ServerState { get; set; } = ServerState.Follower;
         public int? LeaderId { get; set; } = null;
         // }
-        public ConsensusPersistentState PersistentState { get; set; } = new();
+        public ConsensusModulePersistentState PersistentState { get; set; } = new();
         /// <summary>
         /// index of highest log entry known to be committed (initialized to 0, increases monotonically)
         /// </summary>

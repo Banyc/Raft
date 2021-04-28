@@ -6,7 +6,7 @@ namespace Raft.Peer.Helpers
 {
     public static class DebugHelpers
     {
-        public static void PrintPeerLog(ConsensusState state, ConsensusSettings settings, int followerIndex)
+        public static void PrintPeerLog(ConsensusModuleStates state, ConsensusModuleSettings settings, int followerIndex)
         {
             StringBuilder result = new();
             result.Append("Leader ID: ").Append(settings.ThisPeerId).Append(", follower index: ").Append(followerIndex).AppendLine();
