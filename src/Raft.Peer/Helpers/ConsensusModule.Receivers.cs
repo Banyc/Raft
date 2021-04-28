@@ -147,7 +147,7 @@ namespace Raft.Peer.Helpers
                     // DEBUG only
                     if (arguments.LastLogIndex < this.state.PersistentState.Log.Count - 1)
                     {
-                        Console.WriteLine($"[requestVote] candidate’s ({arguments.CandidateId}) log is NOT at least as up-to-date as receiver’s ({this.settings.ThisPeerId}) log");
+                        Console.WriteLine($"[requestVote] candidate’s ({arguments.CandidateId}) lastLogIndex {arguments.LastLogIndex} < receiver’s ({this.settings.ThisPeerId}) lastLogIndex {this.state.PersistentState.Log.Count - 1}");
                     }
 
                     if (result.VoteGranted)

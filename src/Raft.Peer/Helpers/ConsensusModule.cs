@@ -46,7 +46,8 @@ namespace Raft.Peer.Helpers
             ConditionalInitiateTimerElectionTimeout();
         }
 
-        private void BecomeLeader()
+        // this method lasts for a whole term
+        private async Task BecomeLeaderAsync()
         {
             this.state.ServerState = ServerState.Leader;
             this.timerElectionTimeout.Stop();
@@ -62,7 +63,7 @@ namespace Raft.Peer.Helpers
             // send heartbeats before any other server time out.
             // establish authority
             // prevent new elections
-            DoAppendEntries(term: this.state.PersistentState.CurrentTerm);
+            await DoAppendEntriesAsync(term: this.state.PersistentState.CurrentTerm);
         }
 
         private void InitiateTimerElectionTimeoutInterval()
@@ -118,22 +119,25 @@ namespace Raft.Peer.Helpers
 
         // candidate -{requestVote}-> followers
         // this := candidate
-        private void TimerElectionTimeout_Elapsed(object sender, ElapsedEventArgs e)
+        private async void TimerElectionTimeout_Elapsed(object sender, ElapsedEventArgs e)
         {
-            // After the election timeout the follower becomes a candidate
-            this.state.ServerState = ServerState.Candidate;
-            // and starts a new election term...
-            this.state.PersistentState.CurrentTerm++;
-            // ...votes for itself...
-            this.state.PersistentState.VotedFor = this.settings.ThisPeerId;
-            this.state.PersistentState.VoteCount = 0;
-            this.state.PersistentState.VoteCount++;
+            lock (this)
+            {
+                // After the election timeout the follower becomes a candidate
+                this.state.ServerState = ServerState.Candidate;
+                // and starts a new election term...
+                this.state.PersistentState.CurrentTerm++;
+                // ...votes for itself...
+                this.state.PersistentState.VotedFor = this.settings.ThisPeerId;
+                this.state.PersistentState.VoteCount = 0;
+                this.state.PersistentState.VoteCount++;
+
+                // reset election timer
+                ConditionalInitiateTimerElectionTimeout();
+            }
 
             // send requestVotes
-            DoRequestVote();
-
-            // reset election timer
-            ConditionalInitiateTimerElectionTimeout();
+            await DoRequestVoteAsync();
         }
     }
 }

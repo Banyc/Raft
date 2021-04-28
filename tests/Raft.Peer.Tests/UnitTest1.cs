@@ -51,8 +51,8 @@ namespace Raft.Peer.Tests
 
             Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
 
-            transportationTimeLowBoundMillisecond = 2;
-            transportationTimeHighBoundMillisecond = 30;
+            transportationTimeLowBoundMillisecond = 70;
+            transportationTimeHighBoundMillisecond = 80;
 
             while (true)
             {

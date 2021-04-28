@@ -12,7 +12,7 @@ namespace Raft.Peer.Helpers
         #region "appendEntries"
         // leader -{AppendEntries}-> followers
         // this := leader
-        private async void DoAppendEntries(int term)
+        private async Task DoAppendEntriesAsync(int term)
         {
             List<Task> tasks = new();
             // send requestVotes
@@ -157,7 +157,7 @@ namespace Raft.Peer.Helpers
         }
         #endregion
 
-        private async void DoRequestVote()
+        private async Task DoRequestVoteAsync()
         {
             List<Task> tasks = new();
             int i;
@@ -168,6 +168,7 @@ namespace Raft.Peer.Helpers
                     continue;
                 }
                 int peerIndex = i;
+                Task appendEntriesTask = null;
                 Task task = Task.Run(async () =>
                 {
                     RequestVoteArgs args;
@@ -241,11 +242,15 @@ namespace Raft.Peer.Helpers
                             // send heartbeats before any other server time out.
                             // establish authority
                             // prevent new elections
-                            BecomeLeader();
+                            appendEntriesTask = BecomeLeaderAsync();
                         }
                     }
                 });
                 tasks.Add(task);
+                if (appendEntriesTask != null)
+                {
+                    tasks.Add(appendEntriesTask);
+                }
             }
             await Task.WhenAll(tasks);
         }
