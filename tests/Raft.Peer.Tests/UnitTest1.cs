@@ -12,6 +12,8 @@ namespace Raft.Peer.Tests
     {
         private List<ConsensusModule> consensusModules;
         private readonly Random random = new();
+        private readonly int transportationTimeHighBoundMillisecond = 30;
+        private readonly int transportationTimeLowBoundMillisecond = 2;
         private (string, int) previousCommand = ("a", 1);
         private readonly bool isShowElectionDebugMessage = true;
         private readonly bool isShowHeartbeatDebugMessage = false;
@@ -36,11 +38,11 @@ namespace Raft.Peer.Tests
                 consensus.Start();
             }
 
-            Submit(consensusModules);
+            // Submit(consensusModules);
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            // Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
 
-            Submit(consensusModules);
+            // Submit(consensusModules);
 
             while (true)
             {
@@ -71,12 +73,12 @@ namespace Raft.Peer.Tests
         private async Task<AppendEntriesReply> AppendEntriesAsyncEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments, CancellationToken cancellationToken)
         {
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} |-->  {targetPeerId}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->| {targetPeerId}");
             var reply = consensusModules[targetPeerId].AppendEntries(arguments);
             string statusChar = reply.Success ? "+" : "x";
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  <{statusChar}-| {targetPeerId}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} |<{statusChar}-  {targetPeerId}");
             return reply;
         }
@@ -84,12 +86,12 @@ namespace Raft.Peer.Tests
         private async Task<RequestVoteReply> RequestVoteAsyncEventHandler(ConsensusModule sender, int targetPeerId, RequestVoteArgs arguments, CancellationToken cancellationToken)
         {
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term} |-->  {targetPeerId}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  -->| {targetPeerId}");
             var reply = consensusModules[targetPeerId].RequestVote(arguments);
             string statusChar = reply.VoteGranted ? "+" : "x";
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  <{statusChar}-| {targetPeerId}.{reply.Term}");
-            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(2, 30)));
+            await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term} |<{statusChar}-  {targetPeerId}.{reply.Term}");
             return reply;
         }
@@ -105,9 +107,9 @@ namespace Raft.Peer.Tests
                 {
                     PeerCount = peerCount,
                     ThisPeerId = i,
-                    // TimerHeartbeatTimeout = TimeSpan.FromMilliseconds(50),
+                    // TimerHeartbeatTimeout = TimeSpan.FromMilliseconds(500),
                     // TimerElectionTimeoutHigherBound = TimeSpan.FromMilliseconds(10001),
-                    // TimerElectionTimeoutLowerBound = TimeSpan.FromMilliseconds(10000),
+                    // TimerElectionTimeoutLowerBound = TimeSpan.FromMilliseconds(9000),
                 };
                 (ConsensusModule consensus, ConsensusStateMachine stateMachine) =
                     BuildConsensusModule(settings);

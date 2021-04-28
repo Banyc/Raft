@@ -14,7 +14,6 @@ namespace Raft.Peer.Helpers
         private readonly ConsensusState state = new();
         // The election timeout is the amount of time a follower waits until becoming a candidate.
         private readonly System.Timers.Timer timerElectionTimeout = new();
-        private readonly System.Timers.Timer timerHeartbeatTimeout = new();
         private readonly ConsensusSettings settings;
         private readonly ConsensusStateMachine stateMachine;
         private readonly Random random = new();
@@ -36,16 +35,10 @@ namespace Raft.Peer.Helpers
 
             // timer {
             this.timerElectionTimeout.AutoReset = false;
-            this.timerHeartbeatTimeout.AutoReset = false;
-
-            this.timerHeartbeatTimeout.Interval =
-                this.settings.TimerHeartbeatTimeout.TotalMilliseconds;
 
             this.timerElectionTimeout.Elapsed += TimerElectionTimeout_Elapsed;
-            this.timerHeartbeatTimeout.Elapsed += TimerHeartbeatTimeout_Elapsed;
 
             // }
-
         }
 
         public void Start()
@@ -69,8 +62,7 @@ namespace Raft.Peer.Helpers
             // send heartbeats before any other server time out.
             // establish authority
             // prevent new elections
-            DoAppendEntries();
-            this.timerHeartbeatTimeout.Start();
+            DoAppendEntries(term: this.state.PersistentState.CurrentTerm);
         }
 
         private void InitiateTimerElectionTimeoutInterval()
@@ -105,7 +97,7 @@ namespace Raft.Peer.Helpers
         {
             this.state.ServerState = ServerState.Follower;
             this.state.PersistentState.CurrentTerm = newTerm;
-            this.timerHeartbeatTimeout.Stop();
+            // stop heartbeat
         }
 
         private void UpdateStateMachine()
@@ -136,23 +128,6 @@ namespace Raft.Peer.Helpers
 
             // reset election timer
             ConditionalInitiateTimerElectionTimeout();
-        }
-
-        // leader -{heartbeat}-> followers
-        // this := leader
-        private void TimerHeartbeatTimeout_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            if (this.state.ServerState == ServerState.Follower ||
-                this.state.ServerState == ServerState.Candidate)
-            {
-                this.timerHeartbeatTimeout.Stop();
-                return;
-            }
-            if (this.state.ServerState == ServerState.Leader)
-            {
-                DoAppendEntries();
-            }
-            this.timerHeartbeatTimeout.Start();
         }
     }
 }

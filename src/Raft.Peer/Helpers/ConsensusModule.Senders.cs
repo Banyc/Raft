@@ -11,7 +11,7 @@ namespace Raft.Peer.Helpers
         #region "appendEntries"
         // leader -{AppendEntries}-> followers
         // this := leader
-        private async void DoAppendEntries()
+        private async void DoAppendEntries(int term)
         {
             List<Task> tasks = new();
             // send requestVotes
@@ -25,117 +25,132 @@ namespace Raft.Peer.Helpers
                 }
                 Task task = Task.Run(async () =>
                 {
-                    await DoAppendEntriesWithFollowerIndexAsync(followerIndex);
+                    await DoAppendEntriesWithFollowerIndexAsync(followerIndex, term);
                 });
                 tasks.Add(task);
             }
             await Task.WhenAll(tasks);
         }
 
-        private async Task DoAppendEntriesWithFollowerIndexAsync(int followerIndex)
+        private async Task DoAppendEntriesWithFollowerIndexAsync(int followerIndex, int term)
         {
+            // the first appendEntries should be a pure (no-op) hearbeat
+            bool isWithoutEntries = true;
             AppendEntriesReply reply;
-            do
+            bool isKeepLoopping = true;
+
+            // until new election
+            while (isKeepLoopping)
             {
-                reply = null;
-                AppendEntriesArgs args;
-                lock (this)
+                // until a successful reply
+                do
                 {
-                    int prevLogIndex = this.state.NextIndex[followerIndex] - 1;
-                    int prevLogTerm = -1;
-                    if (prevLogIndex > 0)
+                    reply = null;
+                    AppendEntriesArgs args;
+                    lock (this)
                     {
-                        prevLogTerm = this.state.PersistentState.Log[prevLogIndex].Term;
-                    }
-                    args = new()
-                    {
-                        Entries = new List<ConsensusEntry>(),
-                        Term = this.state.PersistentState.CurrentTerm,
-                        LeaderId = this.settings.ThisPeerId,
-                        LeaderCommit = this.state.CommitIndex,
-                        PrevLogIndex = prevLogIndex,
-                        PrevLogTerm = prevLogTerm,
-                    };
-                    // set entries
-                    if (this.state.PersistentState.Log.Count - 1 >= this.state.NextIndex[followerIndex])
-                    {
-                        args.Entries = this.state.PersistentState.Log
-                            .Skip(this.state.NextIndex[followerIndex])
-                            .ToList();
-                    }
-                }
-                // TODO: timeout exception => release threads
-                // if timeout and have logs, no re-send
-                CancellationTokenSource tokenSource = new();
-                Task<AppendEntriesReply> task = this.SendAppendEntriesAsync(this, followerIndex, args, tokenSource.Token);
-                if (await Task.WhenAny(
-                    task,
-                    Task.Delay(this.settings.TimerHeartbeatTimeout)) == task)
-                {
-                    // task completed within timeout
-                    reply = await task;
-                }
-                else
-                {
-                    // timeout
-                    tokenSource.Cancel();
-                    return;
-                }
-                lock (this)
-                {
-                    if (reply.Term > this.state.PersistentState.CurrentTerm)
-                    {
-                        // step down
-                        StepDown(reply.Term);
-                        return;
-                    }
-                    if (!(
-                        this.state.ServerState == ServerState.Leader &&
-                        reply.Term == this.state.PersistentState.CurrentTerm
-                        ))
-                    {
-                        // received an outdated appendEntries RPC
-                        // discard
-                        return;
-                    }
-                    if (reply.Success)
-                    {
-                        this.state.NextIndex[followerIndex] += args.Entries.Count;
-                        this.state.MatchIndex[followerIndex] = this.state.NextIndex[followerIndex] - 1;
-
-                        // leader commits
-                        while (true)
+                        int prevLogIndex = this.state.NextIndex[followerIndex] - 1;
+                        int prevLogTerm = -1;
+                        if (prevLogIndex > 0)
                         {
-                            int newCommitIndex = this.state.CommitIndex + 1;
-                            int matchIndexCount = 0;
-                            int i;
-                            for (i = 0; i < this.settings.PeerCount; i++)
-                            {
-                                if (this.state.MatchIndex[i] > newCommitIndex)
-                                {
-                                    matchIndexCount++;
-                                }
-                            }
-                            if (newCommitIndex > this.state.CommitIndex &&
-                                matchIndexCount > this.settings.PeerCount / 2 &&
-                                this.state.PersistentState.Log[newCommitIndex].Term == this.state.PersistentState.CurrentTerm)
-                            {
-                                this.state.CommitIndex = newCommitIndex;
-                            }
-                            else
-                            {
-                                break;
-                            }
+                            prevLogTerm = this.state.PersistentState.Log[prevLogIndex].Term;
                         }
-
-                        UpdateStateMachine();
+                        args = new()
+                        {
+                            Entries = new List<ConsensusEntry>(),
+                            Term = this.state.PersistentState.CurrentTerm,
+                            LeaderId = this.settings.ThisPeerId,
+                            LeaderCommit = this.state.CommitIndex,
+                            PrevLogIndex = prevLogIndex,
+                            PrevLogTerm = prevLogTerm,
+                        };
+                        // set entries
+                        if (this.state.PersistentState.Log.Count - 1 >= this.state.NextIndex[followerIndex] && !isWithoutEntries)
+                        {
+                            args.Entries = this.state.PersistentState.Log
+                                .Skip(this.state.NextIndex[followerIndex])
+                                .ToList();
+                        }
+                    }
+                    // TODO: timeout exception => release threads
+                    // if timeout and have logs, no re-send
+                    CancellationTokenSource tokenSource = new();
+                    Task<AppendEntriesReply> task = this.SendAppendEntriesAsync(this, followerIndex, args, tokenSource.Token);
+                    if (await Task.WhenAny(
+                        task,
+                        Task.Delay(this.settings.TimerHeartbeatTimeout)) == task)
+                    {
+                        // task completed within timeout
+                        reply = await task;
                     }
                     else
                     {
-                        this.state.NextIndex[followerIndex]--;
+                        // timeout
+                        tokenSource.Cancel();
+                        break;
                     }
+                    lock (this)
+                    {
+                        if (reply.Term > this.state.PersistentState.CurrentTerm)
+                        {
+                            // step down
+                            StepDown(reply.Term);
+                            break;
+                        }
+                        if (!(
+                            this.state.ServerState == ServerState.Leader &&
+                            reply.Term == this.state.PersistentState.CurrentTerm
+                            ))
+                        {
+                            // received an outdated appendEntries RPC
+                            // discard
+                            break;
+                        }
+                        if (reply.Success)
+                        {
+                            this.state.NextIndex[followerIndex] += args.Entries.Count;
+                            this.state.MatchIndex[followerIndex] = this.state.NextIndex[followerIndex] - 1;
+
+                            // leader commits
+                            while (true)
+                            {
+                                int newCommitIndex = this.state.CommitIndex + 1;
+                                int matchIndexCount = 0;
+                                int i;
+                                for (i = 0; i < this.settings.PeerCount; i++)
+                                {
+                                    if (this.state.MatchIndex[i] > newCommitIndex)
+                                    {
+                                        matchIndexCount++;
+                                    }
+                                }
+                                if (newCommitIndex > this.state.CommitIndex &&
+                                    matchIndexCount > this.settings.PeerCount / 2 &&
+                                    this.state.PersistentState.Log[newCommitIndex].Term == this.state.PersistentState.CurrentTerm)
+                                {
+                                    this.state.CommitIndex = newCommitIndex;
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+
+                            UpdateStateMachine();
+                        }
+                        else
+                        {
+                            this.state.NextIndex[followerIndex]--;
+                        }
+                    }
+                } while (reply.Success == false);
+                isWithoutEntries = false;
+                await Task.Delay(this.settings.TimerHeartbeatTimeout);
+                lock (this)
+                {
+                    isKeepLoopping = term == this.state.PersistentState.CurrentTerm && this.state.ServerState == ServerState.Leader;
                 }
-            } while (reply.Success == false);
+            }
         }
         #endregion
 
