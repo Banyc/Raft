@@ -40,9 +40,9 @@ namespace Raft.Peer.Tests
 
             // Submit(consensusModules);
 
-            // Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
 
-            // Submit(consensusModules);
+            Submit(consensusModules);
 
             while (true)
             {

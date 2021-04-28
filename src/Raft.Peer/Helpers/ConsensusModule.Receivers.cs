@@ -155,6 +155,7 @@ namespace Raft.Peer.Helpers
             {
                 if (this.state.ServerState != ServerState.Leader)
                 {
+                    reply.IsSucceeded = false;
                     reply.IsLeaderKnown = this.state.LeaderId != null;
                     if (reply.IsLeaderKnown)
                     {
@@ -163,6 +164,9 @@ namespace Raft.Peer.Helpers
                 }
                 else
                 {
+                    reply.IsSucceeded = true;
+                    reply.IsLeaderKnown = true;
+                    reply.LeaderId = this.settings.ThisPeerId;
                     ConsensusEntry entry = new()
                     {
                         Command = command,
