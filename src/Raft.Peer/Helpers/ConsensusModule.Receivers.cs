@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using Raft.Peer.Models;
@@ -184,7 +185,7 @@ namespace Raft.Peer.Helpers
 
         // no guarante to be committed
         // client -> leader
-        public async Task<SetValueReply> SetValueAsync((string, int) command)
+        public async Task<SetValueReply> SetValueAsync(KeyValuePair<string, int> command)
         {
             Task persistenceTask = null;
             SetValueReply reply = new();
@@ -214,7 +215,10 @@ namespace Raft.Peer.Helpers
                     persistenceTask = this.persistence.SaveAsync(this.state.PersistentState);
                 }
             }
-            await persistenceTask;
+            if (persistenceTask != null)
+            {
+                await persistenceTask;
+            }
             return reply;
         }
     }

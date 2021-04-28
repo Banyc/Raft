@@ -14,7 +14,7 @@ namespace Raft.Peer.Tests
         private readonly Random random = new();
         private int transportationTimeHighBoundMillisecond = 30;
         private int transportationTimeLowBoundMillisecond = 2;
-        private (string, int) previousCommand = ("a", 0);
+        private KeyValuePair<string, int> previousCommand = new("a", 0);
         private readonly bool isShowElectionDebugMessage = true;
         private readonly bool isShowHeartbeatDebugMessage = false;
 
@@ -87,7 +87,9 @@ namespace Raft.Peer.Tests
             SetValueReply reply;
             do
             {
-                reply = await consensusModule.SetValueAsync((previousCommand.Item1, previousCommand.Item2 + 1));
+                KeyValuePair<string, int> command = new(previousCommand.Key, previousCommand.Value + 1);
+                reply = await consensusModule.SetValueAsync(command);
+                this.previousCommand = command;
                 if (!reply.IsSucceeded)
                 {
                     if (!reply.IsLeaderKnown)

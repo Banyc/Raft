@@ -5,9 +5,9 @@ namespace Raft.Peer.Helpers
     {
         public Dictionary<string, int> Map { get; set; }
 
-        public void Apply((string, int) command)
+        public void Apply(KeyValuePair<string, int> command)
         {
-            this.Map[command.Item1] = command.Item2;
+            this.Map[command.Key] = command.Value;
         }
     }
 }
