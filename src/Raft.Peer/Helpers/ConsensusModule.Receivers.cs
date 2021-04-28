@@ -184,8 +184,9 @@ namespace Raft.Peer.Helpers
 
         // no guarante to be committed
         // client -> leader
-        public SetValueReply SetValue((string, int) command)
+        public async Task<SetValueReply> SetValueAsync((string, int) command)
         {
+            Task persistenceTask = null;
             SetValueReply reply = new();
             lock (this)
             {
@@ -210,8 +211,10 @@ namespace Raft.Peer.Helpers
                         Term = this.state.PersistentState.CurrentTerm,
                     };
                     this.state.PersistentState.Log.Add(entry);
+                    persistenceTask = this.persistence.SaveAsync(this.state.PersistentState);
                 }
             }
+            await persistenceTask;
             return reply;
         }
     }

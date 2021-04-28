@@ -40,40 +40,40 @@ namespace Raft.Peer.Tests
 
             // Submit(consensusModules);
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
-            Submit(consensusModules);
+            await SubmitAsync(consensusModules);
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
             // network is extremely jamming
             Console.WriteLine("[network] network is extremely jamming");
             transportationTimeLowBoundMillisecond = 300;
             transportationTimeHighBoundMillisecond = 300;
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
             // network is jamming
             Console.WriteLine("[network] network is jamming");
             transportationTimeLowBoundMillisecond = 2;
             transportationTimeHighBoundMillisecond = 80;
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
-            Submit(consensusModules);
+            await SubmitAsync(consensusModules);
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
             // network is stable
             Console.WriteLine("[network] network is stable");
             transportationTimeLowBoundMillisecond = 2;
             transportationTimeHighBoundMillisecond = 30;
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
-            Submit(consensusModules);
+            await SubmitAsync(consensusModules);
 
-            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
             // while (true)
             // {
@@ -81,13 +81,13 @@ namespace Raft.Peer.Tests
             // }
         }
 
-        private void Submit(List<ConsensusModule> consensusModules)
+        private async Task SubmitAsync(List<ConsensusModule> consensusModules)
         {
             ConsensusModule consensusModule = consensusModules[0];
             SetValueReply reply;
             do
             {
-                reply = consensusModule.SetValue((previousCommand.Item1, previousCommand.Item2 + 1));
+                reply = await consensusModule.SetValueAsync((previousCommand.Item1, previousCommand.Item2 + 1));
                 if (!reply.IsSucceeded)
                 {
                     if (!reply.IsLeaderKnown)
