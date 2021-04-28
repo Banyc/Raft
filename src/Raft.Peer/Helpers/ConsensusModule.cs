@@ -49,6 +49,8 @@ namespace Raft.Peer.Helpers
         // this method lasts for a whole term
         private async Task BecomeLeaderAsync()
         {
+            // DEBUG only
+            Console.WriteLine($"[requestVote] {this.settings.ThisPeerId} becomes leader");
             this.state.ServerState = ServerState.Leader;
             this.timerElectionTimeout.Stop();
             this.state.NextIndex.Clear();

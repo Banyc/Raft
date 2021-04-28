@@ -46,18 +46,39 @@ namespace Raft.Peer.Tests
 
             Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
 
+            // network is extremely jamming
+            Console.WriteLine("[network] network is extremely jamming");
             transportationTimeLowBoundMillisecond = 300;
             transportationTimeHighBoundMillisecond = 300;
 
             Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
 
+            // network is jamming
+            Console.WriteLine("[network] network is jamming");
             transportationTimeLowBoundMillisecond = 2;
             transportationTimeHighBoundMillisecond = 80;
 
-            while (true)
-            {
-                // keep running
-            }
+            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+
+            Submit(consensusModules);
+
+            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+
+            // network is stable
+            Console.WriteLine("[network] network is stable");
+            transportationTimeLowBoundMillisecond = 2;
+            transportationTimeHighBoundMillisecond = 30;
+
+            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+
+            Submit(consensusModules);
+
+            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+
+            // while (true)
+            // {
+            //     // keep running
+            // }
         }
 
         private void Submit(List<ConsensusModule> consensusModules)
@@ -82,7 +103,7 @@ namespace Raft.Peer.Tests
 
         private async Task<AppendEntriesReply> AppendEntriesAsyncEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments, CancellationToken cancellationToken)
         {
-            if (arguments.Entries.Count > 0) Console.WriteLine($"[appendEntries] {arguments.LeaderId}.{arguments.Term} |-->  {targetPeerId}");
+            // if (arguments.Entries.Count > 0) Console.WriteLine($"[appendEntries] {arguments.LeaderId}.{arguments.Term} |-->  {targetPeerId}");
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} |-->  {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->| {targetPeerId}");

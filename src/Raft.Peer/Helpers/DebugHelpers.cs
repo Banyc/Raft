@@ -6,10 +6,10 @@ namespace Raft.Peer.Helpers
 {
     public static class DebugHelpers
     {
-        public static void PrintPeerLog(ConsensusState state, ConsensusSettings settings)
+        public static void PrintPeerLog(ConsensusState state, ConsensusSettings settings, int followerIndex)
         {
             StringBuilder result = new();
-            result.Append("Leader ID: ").Append(settings.ThisPeerId).AppendLine();
+            result.Append("Leader ID: ").Append(settings.ThisPeerId).Append(", follower index: ").Append(followerIndex).AppendLine();
             int i;
             result.AppendLine("nextIndex:");
             for (i = 0; i < settings.PeerCount; i++)

@@ -159,9 +159,9 @@ namespace Raft.Peer.Helpers
                     isKeepLoopping = term == this.state.PersistentState.CurrentTerm && this.state.ServerState == ServerState.Leader;
                 }
                 // DEBUG only
-                if (isPrintDebugInfo)
+                if (isPrintDebugInfo && reply?.Success == true)
                 {
-                    DebugHelpers.PrintPeerLog(this.state, this.settings);
+                    DebugHelpers.PrintPeerLog(this.state, this.settings, followerIndex);
                 }
             }
         }
