@@ -12,8 +12,8 @@ namespace Raft.Peer.Tests
     {
         private List<ConsensusModule> consensusModules;
         private readonly Random random = new();
-        private readonly int transportationTimeHighBoundMillisecond = 30;
-        private readonly int transportationTimeLowBoundMillisecond = 2;
+        private int transportationTimeHighBoundMillisecond = 30;
+        private int transportationTimeLowBoundMillisecond = 2;
         private (string, int) previousCommand = ("a", 1);
         private readonly bool isShowElectionDebugMessage = true;
         private readonly bool isShowHeartbeatDebugMessage = false;
@@ -44,6 +44,16 @@ namespace Raft.Peer.Tests
 
             Submit(consensusModules);
 
+            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+
+            transportationTimeLowBoundMillisecond = 300;
+            transportationTimeHighBoundMillisecond = 300;
+
+            Task.Delay(TimeSpan.FromMilliseconds(1000)).Wait();
+
+            transportationTimeLowBoundMillisecond = 2;
+            transportationTimeHighBoundMillisecond = 30;
+
             while (true)
             {
                 // keep running
@@ -67,7 +77,7 @@ namespace Raft.Peer.Tests
                     consensusModule = consensusModules[reply.LeaderId];
                 }
             } while (!reply.IsSucceeded);
-            Console.WriteLine("[submit] succeeded");
+            Console.WriteLine($"[submit] succeeded ({reply.LeaderId})");
         }
 
         private async Task<AppendEntriesReply> AppendEntriesAsyncEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments, CancellationToken cancellationToken)

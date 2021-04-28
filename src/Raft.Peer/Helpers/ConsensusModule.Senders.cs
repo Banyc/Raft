@@ -175,10 +175,18 @@ namespace Raft.Peer.Helpers
                     int initialTerm;
                     lock (this)
                     {
+                        int lastLogIndex = this.state.PersistentState.Log.Count - 1;
+                        int lastLogTerm = -1;
+                        if (lastLogIndex > 0)
+                        {
+                            lastLogTerm = this.state.PersistentState.Log[lastLogIndex].Term;
+                        }
                         args = new()
                         {
                             CandidateId = this.settings.ThisPeerId,
                             Term = this.state.PersistentState.CurrentTerm,
+                            LastLogIndex = lastLogIndex,
+                            LastLogTerm = lastLogTerm,
                         };
                         initialTerm = this.state.PersistentState.CurrentTerm;
                     }
