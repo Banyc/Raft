@@ -8,6 +8,7 @@ namespace Raft.Peer.Helpers
 {
     public partial class ConsensusModule
     {
+        #region "appendEntries"
         // leader -{AppendEntries}-> followers
         // this := leader
         private async void DoAppendEntries()
@@ -136,6 +137,7 @@ namespace Raft.Peer.Helpers
                 }
             } while (reply.Success == false);
         }
+        #endregion
 
         private async void DoRequestVote()
         {

@@ -56,6 +56,9 @@ namespace Raft.Peer.Helpers
                 {
                     result.Success = true;
 
+                    // update leader ID
+                    this.state.LeaderId = arguments.LeaderId;
+
                     // append new entries
                     this.state.PersistentState.Log.AddRange(arguments.Entries);
 
@@ -84,9 +87,6 @@ namespace Raft.Peer.Helpers
                     //  new term
                     // ensure turning candidate -> follower 
                     StepDown(arguments.Term);
-
-                    // update leader ID
-                    this.state.LeaderId = arguments.LeaderId;
                 }
 
                 // return the updated currentTerm
@@ -144,6 +144,35 @@ namespace Raft.Peer.Helpers
                 ConditionalInitiateTimerElectionTimeout();
                 return result;
             }
+        }
+
+        // no guarante to be committed
+        // client -> leader
+        public SetValueReply SetValue((string, int) command)
+        {
+            SetValueReply reply = new();
+            lock (this)
+            {
+                if (this.state.ServerState != ServerState.Leader)
+                {
+                    reply.IsLeaderKnown = this.state.LeaderId != null;
+                    if (reply.IsLeaderKnown)
+                    {
+                        reply.LeaderId = this.state.LeaderId.Value;
+                    }
+                }
+                else
+                {
+                    ConsensusEntry entry = new()
+                    {
+                        Command = command,
+                        Index = this.state.PersistentState.Log.Count,
+                        Term = this.state.PersistentState.CurrentTerm,
+                    };
+                    this.state.PersistentState.Log.Add(entry);
+                }
+            }
+            return reply;
         }
     }
 }
