@@ -15,5 +15,9 @@ In this lab you'll implement Raft as a Go object type with associated methods, m
 ## Known Issues
 
 -   Follower unexpectedly adding duplicated entries.
+    -   fixed
 -   The election timeout timer never fire when all peers are candidates and the network latency is great.
     -   suppose to happen since the lagged reply of the requestVote always refresh the timer.
+-   lastLogIndex of the requestVote RPC arguments from Candidate sometimes become 0.
+    -   due to a wrong condition of log removal
+    -   fixed

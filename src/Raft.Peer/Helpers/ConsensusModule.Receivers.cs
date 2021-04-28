@@ -45,7 +45,7 @@ namespace Raft.Peer.Helpers
                     if (arguments.PrevLogIndex > 0 &&
                         arguments.PrevLogIndex < this.state.PersistentState.Log.Count &&
                         this.state.PersistentState.Log[arguments.PrevLogIndex].Term !=
-                            arguments.Term)
+                            arguments.PrevLogTerm)
                     {
                         // this.state.PersistentState.Log.RemoveAt(arguments.PrevLogIndex);
                         this.state.PersistentState.Log.RemoveRange(

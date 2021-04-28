@@ -39,6 +39,7 @@ namespace Raft.Peer.Helpers
             bool isWithoutEntries = true;
             AppendEntriesReply reply;
             bool isKeepLoopping = true;
+            bool isPrintDebugInfo = false;
 
             // until new election
             while (isKeepLoopping)
@@ -65,12 +66,14 @@ namespace Raft.Peer.Helpers
                             PrevLogIndex = prevLogIndex,
                             PrevLogTerm = prevLogTerm,
                         };
+                        isPrintDebugInfo = false;
                         // set entries
                         if (this.state.PersistentState.Log.Count - 1 >= this.state.NextIndex[followerIndex] && !isWithoutEntries)
                         {
                             args.Entries = this.state.PersistentState.Log
                                 .Skip(this.state.NextIndex[followerIndex])
                                 .ToList();
+                            isPrintDebugInfo = true;
                         }
                     }
                     // if timeout and have logs, no immediate re-send
@@ -112,7 +115,8 @@ namespace Raft.Peer.Helpers
                         }
                         if (reply.Success)
                         {
-                            this.state.NextIndex[followerIndex] += args.Entries.Count;
+                            // this.state.NextIndex[followerIndex] += args.Entries.Count;
+                            this.state.NextIndex[followerIndex] = reply.MatchIndex + 1;
                             this.state.MatchIndex[followerIndex] = this.state.NextIndex[followerIndex] - 1;
 
                             // leader commits
@@ -153,6 +157,11 @@ namespace Raft.Peer.Helpers
                 lock (this)
                 {
                     isKeepLoopping = term == this.state.PersistentState.CurrentTerm && this.state.ServerState == ServerState.Leader;
+                }
+                // DEBUG only
+                if (isPrintDebugInfo)
+                {
+                    DebugHelpers.PrintPeerLog(this.state, this.settings);
                 }
             }
         }
