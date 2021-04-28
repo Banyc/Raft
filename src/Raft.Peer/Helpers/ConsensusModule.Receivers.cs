@@ -130,6 +130,12 @@ namespace Raft.Peer.Helpers
                         )
                         ;
 
+                    // BUG: sometime leader sends duplicated appendEntries to followers.
+                    if (arguments.LastLogIndex < this.state.PersistentState.Log.Count - 1)
+                    {
+                        Console.WriteLine($"[requestVote] candidate’s ({arguments.CandidateId}) log is NOT at least as up-to-date as receiver’s ({this.settings.ThisPeerId}) log");
+                    }
+
                     if (result.VoteGranted)
                     {
                         this.state.PersistentState.VotedFor = arguments.CandidateId;

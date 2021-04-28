@@ -73,8 +73,7 @@ namespace Raft.Peer.Helpers
                                 .ToList();
                         }
                     }
-                    // TODO: timeout exception => release threads
-                    // if timeout and have logs, no re-send
+                    // if timeout and have logs, no immediate re-send
                     try
                     {
                         using CancellationTokenSource tokenSource = new();

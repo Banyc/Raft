@@ -14,7 +14,7 @@ namespace Raft.Peer.Tests
         private readonly Random random = new();
         private int transportationTimeHighBoundMillisecond = 30;
         private int transportationTimeLowBoundMillisecond = 2;
-        private (string, int) previousCommand = ("a", 1);
+        private (string, int) previousCommand = ("a", 0);
         private readonly bool isShowElectionDebugMessage = true;
         private readonly bool isShowHeartbeatDebugMessage = false;
 
@@ -82,6 +82,7 @@ namespace Raft.Peer.Tests
 
         private async Task<AppendEntriesReply> AppendEntriesAsyncEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments, CancellationToken cancellationToken)
         {
+            if (arguments.Entries.Count > 0) Console.WriteLine($"[appendEntries] {arguments.LeaderId}.{arguments.Term} |-->  {targetPeerId}");
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} |-->  {targetPeerId}");
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->| {targetPeerId}");
