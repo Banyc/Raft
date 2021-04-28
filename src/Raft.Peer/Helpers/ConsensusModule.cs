@@ -97,6 +97,9 @@ namespace Raft.Peer.Helpers
         {
             this.state.ServerState = ServerState.Follower;
             this.state.PersistentState.CurrentTerm = newTerm;
+            // now vote for the new term
+            // the previous vote was stale
+            this.state.PersistentState.VotedFor = null;
             // stop heartbeat
         }
 

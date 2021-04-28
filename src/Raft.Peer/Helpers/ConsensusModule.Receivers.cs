@@ -117,9 +117,6 @@ namespace Raft.Peer.Helpers
                     {
                         // step down
                         StepDown(arguments.Term);
-                        // now vote for the new term
-                        // the previous vote was stale
-                        this.state.PersistentState.VotedFor = null;
                     }
 
                     result.VoteGranted =
