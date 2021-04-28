@@ -11,6 +11,7 @@ namespace Raft.Peer.Helpers
         // this := follower
         public AppendEntriesReply AppendEntries(AppendEntriesArgs arguments)
         {
+            // possible to receive duplicated appendEntries due to the reply not reaching the leader.
             lock (this)
             {
                 this.timerElectionTimeout.Stop();
@@ -60,7 +61,20 @@ namespace Raft.Peer.Helpers
                     this.state.LeaderId = arguments.LeaderId;
 
                     // append new entries
-                    this.state.PersistentState.Log.AddRange(arguments.Entries);
+                    int i;
+                    for (i = 0; i < arguments.Entries.Count; i++)
+                    {
+                        var entry = arguments.Entries[i];
+                        int indexOfEntry = (arguments.PrevLogIndex + 1) + i;
+                        if (indexOfEntry < this.state.PersistentState.Log.Count)
+                        {
+                            this.state.PersistentState.Log[indexOfEntry] = entry;
+                        }
+                        else
+                        {
+                            this.state.PersistentState.Log.Add(entry);
+                        }
+                    }
 
                     // commit
                     if (arguments.LeaderCommit > this.state.CommitIndex)
@@ -130,7 +144,7 @@ namespace Raft.Peer.Helpers
                         )
                         ;
 
-                    // BUG: sometime leader sends duplicated appendEntries to followers.
+                    // DEBUG only
                     if (arguments.LastLogIndex < this.state.PersistentState.Log.Count - 1)
                     {
                         Console.WriteLine($"[requestVote] candidate’s ({arguments.CandidateId}) log is NOT at least as up-to-date as receiver’s ({this.settings.ThisPeerId}) log");
