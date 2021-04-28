@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -74,21 +75,24 @@ namespace Raft.Peer.Helpers
                     }
                     // TODO: timeout exception => release threads
                     // if timeout and have logs, no re-send
-                    CancellationTokenSource tokenSource = new();
-                    Task<AppendEntriesReply> task = this.SendAppendEntriesAsync(this, followerIndex, args, tokenSource.Token);
-                    if (await Task.WhenAny(
-                        task,
-                        Task.Delay(this.settings.TimerHeartbeatTimeout)) == task)
+                    try
                     {
-                        // task completed within timeout
-                        reply = await task;
-                    }
-                    else
-                    {
-                        // timeout
-                        tokenSource.Cancel();
-                        break;
-                    }
+                        using CancellationTokenSource tokenSource = new();
+                        Task<AppendEntriesReply> task = this.SendAppendEntriesAsync(this, followerIndex, args, tokenSource.Token);
+                        if (await Task.WhenAny(
+                            task,
+                            Task.Delay(this.settings.TimerHeartbeatTimeout)) == task)
+                        {
+                            // task completed within timeout
+                            reply = await task;
+                        }
+                        else
+                        {
+                            // timeout
+                            tokenSource.Cancel();
+                            break;
+                        }
+                    } catch (Exception ex) {}
                     lock (this)
                     {
                         if (reply.Term > this.state.PersistentState.CurrentTerm)
@@ -183,7 +187,7 @@ namespace Raft.Peer.Helpers
                     {
                         // TODO: timeout exception => release threads
                         // if timeout, must re-send
-                        var tokenSource = new CancellationTokenSource();
+                        using var tokenSource = new CancellationTokenSource();
                         Task<RequestVoteReply> requestTask = this.SendRequestVoteAsync(this, peerIndex, args, tokenSource.Token);
                         if (await Task.WhenAny(
                             requestTask,
