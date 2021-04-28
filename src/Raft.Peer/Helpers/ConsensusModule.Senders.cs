@@ -92,6 +92,7 @@ namespace Raft.Peer.Helpers
                             break;
                         }
                     } catch (Exception ex) {}
+
                     lock (this)
                     {
                         if (reply.Term > this.state.PersistentState.CurrentTerm)
