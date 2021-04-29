@@ -16,7 +16,7 @@ In this lab you'll implement Raft as a Go object type with associated methods, m
 
             \-   servers #1 and #2 each have entries from #1 and #2 term.
 
-            \-   servers #3, #4, and #5 each have an entry from #1 only.
+            \-   servers #3, #4, and #5 each have an entry from #1 term only.
 
             \-   server #1 was the old leader.
 
