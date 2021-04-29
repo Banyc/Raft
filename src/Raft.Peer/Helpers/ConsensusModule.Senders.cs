@@ -77,25 +77,19 @@ namespace Raft.Peer.Helpers
                         }
                     }
                     // if timeout and have logs, no immediate re-send
+                    using var tokenSource = new CancellationTokenSource();
                     try
                     {
-                        using CancellationTokenSource tokenSource = new();
+                        tokenSource.CancelAfter(this.settings.TimerHeartbeatTimeout);
                         Task<AppendEntriesReply> task = this.SendAppendEntriesAsync(this, followerIndex, args, tokenSource.Token);
-                        if (await Task.WhenAny(
-                            task,
-                            Task.Delay(this.settings.TimerHeartbeatTimeout)) == task)
-                        {
-                            // task completed within timeout
-                            reply = await task;
-                        }
-                        else
-                        {
-                            // timeout
-                            tokenSource.Cancel();
-                            break;
-                        }
-                    } catch (Exception ex) {}
-
+                        // task completed within timeout
+                        reply = await task;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // timeout
+                        break;
+                    }
                     lock (this)
                     {
                         if (reply.Term > this.state.PersistentState.CurrentTerm)
@@ -203,22 +197,18 @@ namespace Raft.Peer.Helpers
                     RequestVoteReply reply = null;
                     do
                     {
-                        // TODO: timeout exception => release threads
                         // if timeout, must re-send
                         using var tokenSource = new CancellationTokenSource();
-                        Task<RequestVoteReply> requestTask = this.SendRequestVoteAsync(this, peerIndex, args, tokenSource.Token);
-                        if (await Task.WhenAny(
-                            requestTask,
-                            Task.Delay(this.settings.TimerHeartbeatTimeout)) == requestTask)
+                        try
                         {
+                            tokenSource.CancelAfter(this.settings.TimerHeartbeatTimeout);
+                            Task<RequestVoteReply> requestTask = this.SendRequestVoteAsync(this, peerIndex, args, tokenSource.Token);
                             // task completed within timeout
                             reply = await requestTask;
                         }
-                        else
+                        catch (TaskCanceledException)
                         {
                             // timeout
-                            // re-send requestVote
-                            tokenSource.Cancel();
                         }
                     } while (reply == null &&
                         initialTerm == this.state.PersistentState.CurrentTerm);

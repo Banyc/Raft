@@ -9,7 +9,7 @@ namespace Raft.Peer.Models
     public class AppendEntriesArgs
     {
         /// <summary>
-        /// leader’s term
+        /// leader's term
         /// </summary>
         public int Term { get; set; }
         /// <summary>
@@ -30,7 +30,7 @@ namespace Raft.Peer.Models
         /// </summary>
         public List<ConsensusEntry> Entries { get; set; } = new();
         /// <summary>
-        /// leader’s commitIndex
+        /// leader's commitIndex
         /// </summary>
         public int LeaderCommit { get; set; }
     }

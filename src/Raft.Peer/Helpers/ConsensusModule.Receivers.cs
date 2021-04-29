@@ -153,7 +153,7 @@ namespace Raft.Peer.Helpers
                             this.state.PersistentState.VotedFor == arguments.CandidateId
                         ) &&
                         (
-                            // candidate’s log is at least as up-to-date as receiver’s log
+                            // candidate's log is at least as up-to-date as receiver's log
                             arguments.LastLogIndex >= this.state.PersistentState.Log.Count - 1
                         )
                         ;
@@ -161,7 +161,7 @@ namespace Raft.Peer.Helpers
                     // DEBUG only
                     if (arguments.LastLogIndex < this.state.PersistentState.Log.Count - 1)
                     {
-                        Console.WriteLine($"[requestVote] candidate’s ({arguments.CandidateId}) lastLogIndex {arguments.LastLogIndex} < receiver’s ({this.settings.ThisPeerId}) lastLogIndex {this.state.PersistentState.Log.Count - 1}");
+                        Console.WriteLine($"[requestVote] candidate's ({arguments.CandidateId}) lastLogIndex {arguments.LastLogIndex} < receiver's ({this.settings.ThisPeerId}) lastLogIndex {this.state.PersistentState.Log.Count - 1}");
                     }
 
                     if (result.VoteGranted)

@@ -17,6 +17,7 @@ namespace Raft.Peer.Tests
         private KeyValuePair<string, int> previousCommand = new("a", 0);
         private readonly bool isShowElectionDebugMessage = true;
         private readonly bool isShowHeartbeatDebugMessage = false;
+        private double chanceToDropAPackage = 0.01;
 
         [Fact]
         public async void Test()
@@ -57,6 +58,7 @@ namespace Raft.Peer.Tests
             Console.WriteLine("[network] network is jamming");
             transportationTimeLowBoundMillisecond = 2;
             transportationTimeHighBoundMillisecond = 80;
+            chanceToDropAPackage = 0.1;
 
             await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
@@ -68,6 +70,7 @@ namespace Raft.Peer.Tests
             Console.WriteLine("[network] network is stable");
             transportationTimeLowBoundMillisecond = 2;
             transportationTimeHighBoundMillisecond = 30;
+            chanceToDropAPackage = 0.01;
 
             await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
@@ -107,11 +110,25 @@ namespace Raft.Peer.Tests
         {
             // if (arguments.Entries.Count > 0) Console.WriteLine($"[appendEntries] {arguments.LeaderId}.{arguments.Term} |-->  {targetPeerId}");
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} |-->  {targetPeerId}");
+            if (this.random.NextDouble() <= this.chanceToDropAPackage)
+            {
+                if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->x {targetPeerId}");
+                while (!cancellationToken.IsCancellationRequested) { }
+                if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->_ {targetPeerId}");
+                return null;
+            }
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  -->| {targetPeerId}");
             var reply = await consensusModules[targetPeerId].AppendEntriesAsync(arguments);
             string statusChar = reply.Success ? "+" : "x";
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId}  <{statusChar}-| {targetPeerId}");
+            if (this.random.NextDouble() <= this.chanceToDropAPackage)
+            {
+                if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} x<{statusChar}-  {targetPeerId}");
+                while (!cancellationToken.IsCancellationRequested) { }
+                if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} _<{statusChar}-  {targetPeerId}");
+                return null;
+            }
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowHeartbeatDebugMessage) Console.WriteLine($"[appendEntries] {arguments.LeaderId} |<{statusChar}-  {targetPeerId}");
             return reply;
@@ -120,11 +137,25 @@ namespace Raft.Peer.Tests
         private async Task<RequestVoteReply> RequestVoteAsyncEventHandler(ConsensusModule sender, int targetPeerId, RequestVoteArgs arguments, CancellationToken cancellationToken)
         {
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term} |-->  {targetPeerId}");
+            if (this.random.NextDouble() <= this.chanceToDropAPackage)
+            {
+                if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  -->x {targetPeerId}");
+                while (!cancellationToken.IsCancellationRequested) { }
+                if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  -->_ {targetPeerId}");
+                return null;
+            }
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  -->| {targetPeerId}");
             var reply = await consensusModules[targetPeerId].RequestVoteAsync(arguments);
             string statusChar = reply.VoteGranted ? "+" : "x";
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term}  <{statusChar}-| {targetPeerId}.{reply.Term}");
+            if (this.random.NextDouble() <= this.chanceToDropAPackage)
+            {
+                if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term} x<{statusChar}-  {targetPeerId}.{reply.Term}");
+                while (!cancellationToken.IsCancellationRequested) { }
+                if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term} _<{statusChar}-  {targetPeerId}.{reply.Term}");
+                return null;
+            }
             await Task.Delay(TimeSpan.FromMilliseconds(this.random.Next(transportationTimeLowBoundMillisecond, transportationTimeHighBoundMillisecond)));
             if (this.isShowElectionDebugMessage) Console.WriteLine($"[requestVote] {arguments.CandidateId}.{arguments.Term} |<{statusChar}-  {targetPeerId}.{reply.Term}");
             return reply;

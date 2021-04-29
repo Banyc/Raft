@@ -4,7 +4,7 @@ namespace Raft.Peer.Models
     public class RequestVoteArgs
     {
         /// <summary>
-        /// candidate’s term
+        /// candidate's term
         /// </summary>
         public int Term { get; set; }
         /// <summary>
@@ -12,11 +12,11 @@ namespace Raft.Peer.Models
         /// </summary>
         public int CandidateId { get; set; }
         /// <summary>
-        /// index of candidate’s last log entry
+        /// index of candidate's last log entry
         /// </summary>
         public int LastLogIndex { get; set; }
         /// <summary>
-        /// term of candidate’s last log entry
+        /// term of candidate's last log entry
         /// </summary>
         public int LastLogTerm { get; set; }
     }
