@@ -14,7 +14,11 @@ namespace Raft.Peer.Helpers
 
         public async Task SaveAsync(T dataObject)
         {
-            var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(dataObject);
+            System.Text.Json.JsonSerializerOptions options = new()
+            {
+                WriteIndented = true
+            };
+            var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(dataObject, options);
             await File.WriteAllBytesAsync(this.settings.PersistenceFilePath, bytes);
         }
 
