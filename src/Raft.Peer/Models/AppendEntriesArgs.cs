@@ -33,5 +33,9 @@ namespace Raft.Peer.Models
         /// leader's commitIndex
         /// </summary>
         public int LeaderCommit { get; set; }
+        /// <summary>
+        /// remove excessive logs from the followers
+        /// </summary>
+        public int LeaderLastLogIndex { get; set; }
     }
 }

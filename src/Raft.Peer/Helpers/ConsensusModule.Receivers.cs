@@ -64,6 +64,14 @@ namespace Raft.Peer.Helpers
                     // update leader ID
                     this.state.LeaderId = arguments.LeaderId;
 
+                    // truncate excessive log comparing to leader's whole log.
+                    if (this.state.PersistentState.Log.Count - 1 > arguments.LeaderLastLogIndex)
+                    {
+                        this.state.PersistentState.Log.RemoveRange(
+                            arguments.LeaderLastLogIndex + 1,
+                            this.state.PersistentState.Log.Count - (arguments.LeaderLastLogIndex + 1));
+                    }
+
                     // append new entries
                     bool isSavePersistentStateLater = false;
                     int i;
@@ -241,7 +249,7 @@ namespace Raft.Peer.Helpers
                     {
                         return
                             this.state.CommitIndex < entryIndex &&
-                            this.state.PersistentState.CurrentTerm == entryTerm &&
+                            // this.state.PersistentState.CurrentTerm == entryTerm &&
                             entryIndex < this.state.PersistentState.Log.Count &&
                             this.state.PersistentState.Log[entryIndex].Term == entryTerm;
                     }
@@ -256,14 +264,14 @@ namespace Raft.Peer.Helpers
                 lock (this)
                 {
                     // TODO:
-                    if (this.state.PersistentState.CurrentTerm != entryTerm)
-                    {
-                        // not sure if it will be committed or not.
-                        reply.IsCommitInFutureUnclear = true;
-                    }
+                    // if (this.state.PersistentState.CurrentTerm != entryTerm)
+                    // {
+                    //     // not sure if it will be committed or not.
+                    //     reply.IsCommitInFutureUnclear = true;
+                    // }
                     reply.IsSucceeded =
                         this.state.CommitIndex >= entryIndex &&
-                        this.state.PersistentState.CurrentTerm == entryTerm &&
+                        // this.state.PersistentState.CurrentTerm == entryTerm &&
                         entryIndex < this.state.PersistentState.Log.Count &&
                         this.state.PersistentState.Log[entryIndex].Term == entryTerm;
                 }

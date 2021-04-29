@@ -70,6 +70,7 @@ namespace Raft.Peer.Helpers
                             LeaderCommit = this.state.CommitIndex,
                             PrevLogIndex = prevLogIndex,
                             PrevLogTerm = prevLogTerm,
+                            LeaderLastLogIndex = this.state.PersistentState.Log.Count - 1,
                         };
                         isPrintDebugInfo = false;
                         // set entries
@@ -144,7 +145,14 @@ namespace Raft.Peer.Helpers
                                         matchIndexCount++;
                                     }
                                 }
-                                if (matchIndexCount > this.settings.PeerCount / 2)
+                                if (
+                                    // term consideration should be only when no concensus is reached
+                                    (
+                                        matchIndexCount > this.settings.PeerCount / 2 &&
+                                        this.state.PersistentState.Log[tryCommitIndex].Term == this.state.PersistentState.CurrentTerm
+                                    ) ||
+                                    // when full concensus is reached, do not even care about the term
+                                    matchIndexCount == this.settings.PeerCount)
                                 {
                                     this.state.CommitIndex = tryCommitIndex;
                                     // tell client handler that new commit has been made.
