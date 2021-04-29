@@ -115,13 +115,14 @@ namespace Raft.Peer.Helpers
                 // now vote for the new term
                 // the previous vote was stale
                 this.state.PersistentState.VotedFor = null;
+                this.state.LeaderId = null;
             }
             this.state.ServerState = ServerState.Follower;
             this.state.PersistentState.CurrentTerm = newTerm;
             // stop heartbeat
 
             // notify client handler to cancel commit
-            Monitor.PulseAll(this);
+            // Monitor.PulseAll(this);
         }
 
         private void UpdateStateMachine()
