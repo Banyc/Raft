@@ -107,22 +107,28 @@ namespace Raft.Peer.Helpers
                 (b - a) * x + a;
         }
 
-        private void StepDown(int newTerm)
+        private async Task StepDownAsync(int newTerm)
         {
+            Task persistenceTask = null;
             // TODO: review: the persistent state does not seem to require persistence
             if (newTerm > this.state.PersistentState.CurrentTerm)
             {
                 // now vote for the new term
                 // the previous vote was stale
                 this.state.PersistentState.VotedFor = null;
+                this.state.PersistentState.CurrentTerm = newTerm;
                 this.state.LeaderId = null;
+                persistenceTask = this.persistence.SaveAsync(this.state.PersistentState);
             }
             this.state.ServerState = ServerState.Follower;
-            this.state.PersistentState.CurrentTerm = newTerm;
             // stop heartbeat
 
             // notify client handler to cancel commit
             // Monitor.PulseAll(this);
+            if (persistenceTask != null)
+            {
+                await persistenceTask;
+            }
         }
 
         private void UpdateStateMachine()
@@ -139,6 +145,7 @@ namespace Raft.Peer.Helpers
         // this := candidate
         private async void TimerElectionTimeout_Elapsed(object sender, ElapsedEventArgs e)
         {
+            Task persistenceTask = null;
             lock (this)
             {
                 // TODO: review: currentTerm and voteFor do not seem to require persistence
@@ -151,9 +158,13 @@ namespace Raft.Peer.Helpers
                 this.state.PersistentState.VoteCount = 0;
                 this.state.PersistentState.VoteCount++;
 
+                persistenceTask = this.persistence.SaveAsync(this.state.PersistentState);
+
                 // reset election timer
                 ConditionalInitiateTimerElectionTimeout();
             }
+
+            await persistenceTask;
 
             // send requestVotes
             await DoRequestVoteAsync();

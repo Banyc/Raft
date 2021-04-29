@@ -100,12 +100,13 @@ namespace Raft.Peer.Helpers
                         // outer timeout before the token raises TaskCanceledException
                         break;
                     }
+                    Task stepDownTask = null;
                     lock (this)
                     {
                         if (reply.Term > this.state.PersistentState.CurrentTerm)
                         {
                             // step down
-                            StepDown(reply.Term);
+                            stepDownTask = StepDownAsync(reply.Term);
                             break;
                         }
                         if (!(
@@ -125,30 +126,35 @@ namespace Raft.Peer.Helpers
                             this.state.NextIndex[followerIndex] = this.state.MatchIndex[followerIndex] + 1;
 
                             // leader commits
-                            while (true)
+                            int tryCommitIndex = this.state.PersistentState.Log.Count - 1;
+                            while (tryCommitIndex > this.state.CommitIndex &&
+                                this.state.PersistentState.Log[tryCommitIndex].Term == this.state.PersistentState.CurrentTerm)
                             {
-                                int newCommitIndex = this.state.CommitIndex + 1;
                                 int matchIndexCount = 0;
+                                matchIndexCount++;
                                 int i;
                                 for (i = 0; i < this.settings.PeerCount; i++)
                                 {
-                                    if (this.state.MatchIndex[i] > newCommitIndex)
+                                    if (i == this.settings.ThisPeerId)
+                                    {
+                                        continue;
+                                    }
+                                    if (this.state.MatchIndex[i] >= tryCommitIndex)
                                     {
                                         matchIndexCount++;
                                     }
                                 }
-                                if (newCommitIndex > this.state.CommitIndex &&
+                                if (tryCommitIndex > this.state.CommitIndex &&
                                     matchIndexCount > this.settings.PeerCount / 2 &&
-                                    this.state.PersistentState.Log[newCommitIndex].Term == this.state.PersistentState.CurrentTerm)
+                                    this.state.PersistentState.Log[tryCommitIndex].Term == this.state.PersistentState.CurrentTerm)
                                 {
-                                    this.state.CommitIndex = newCommitIndex;
+                                    this.state.CommitIndex = tryCommitIndex;
                                     // tell client handler that new commit has been made.
-                                    Monitor.PulseAll(this);
+                                    // Monitor.PulseAll(this);
+                                    // DEBUG only
+                                    Console.WriteLine("");
                                 }
-                                else
-                                {
-                                    break;
-                                }
+                                tryCommitIndex--;
                             }
 
                             UpdateStateMachine();
@@ -157,6 +163,10 @@ namespace Raft.Peer.Helpers
                         {
                             this.state.NextIndex[followerIndex]--;
                         }
+                    }
+                    if (stepDownTask != null)
+                    {
+                        await stepDownTask;
                     }
                 } while (reply.Success == false);
                 isWithoutEntries = false;
@@ -225,6 +235,7 @@ namespace Raft.Peer.Helpers
                         }
                     } while (reply == null &&
                         initialTerm == this.state.PersistentState.CurrentTerm);
+                    Task stepDownTask = null;
                     lock (this)
                     {
                         if (initialTerm != this.state.PersistentState.CurrentTerm)
@@ -236,7 +247,7 @@ namespace Raft.Peer.Helpers
                         if (reply.Term > this.state.PersistentState.CurrentTerm)
                         {
                             // step down
-                            StepDown(reply.Term);
+                            stepDownTask = StepDownAsync(reply.Term);
                             return;
                         }
                         if (this.state.ServerState != ServerState.Candidate ||
@@ -257,6 +268,10 @@ namespace Raft.Peer.Helpers
                             // prevent new elections
                             appendEntriesTask = BecomeLeaderAsync();
                         }
+                    }
+                    if (stepDownTask != null)
+                    {
+                        await stepDownTask;
                     }
                 });
                 tasks.Add(task);

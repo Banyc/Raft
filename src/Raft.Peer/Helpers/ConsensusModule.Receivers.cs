@@ -17,6 +17,7 @@ namespace Raft.Peer.Helpers
             // possible to receive duplicated appendEntries due to the reply not reaching the leader.
             AppendEntriesReply result = new();
             Task persistenceTask = null;
+            Task stepDownTask = null;
             lock (this)
             {
                 this.timerElectionTimeout.Stop();
@@ -110,13 +111,17 @@ namespace Raft.Peer.Helpers
                     // discover a current leader or
                     //  new term
                     // ensure turning candidate -> follower 
-                    StepDown(arguments.Term);
+                    stepDownTask = StepDownAsync(arguments.Term);
                 }
 
                 // return the updated currentTerm
                 result.Term = this.state.PersistentState.CurrentTerm;
 
                 ConditionalInitiateTimerElectionTimeout();
+            }
+            if (stepDownTask != null)
+            {
+                await stepDownTask;
             }
             // wait saving
             if (persistenceTask != null)
@@ -132,6 +137,7 @@ namespace Raft.Peer.Helpers
         {
             RequestVoteReply result = new();
             Task persistenceTask = null;
+            Task stepDownTask = null;
             lock (this)
             {
                 this.timerElectionTimeout.Stop();
@@ -145,7 +151,7 @@ namespace Raft.Peer.Helpers
                     if (arguments.Term > this.state.PersistentState.CurrentTerm)
                     {
                         // step down
-                        StepDown(arguments.Term);
+                        stepDownTask = StepDownAsync(arguments.Term);
                     }
 
                     result.VoteGranted =
@@ -176,6 +182,10 @@ namespace Raft.Peer.Helpers
 
                 ConditionalInitiateTimerElectionTimeout();
             }
+            if (stepDownTask != null)
+            {
+                await stepDownTask;
+            }
             // wait saving
             if (persistenceTask != null)
             {
@@ -184,13 +194,15 @@ namespace Raft.Peer.Helpers
             return result;
         }
 
-        // no guarante to be committed
+        // guarante to be committed
         // client -> leader
         public async Task<SetValueReply> SetValueAsync(KeyValuePair<string, int> command)
         {
             Task persistenceTask = null;
             int entryIndex = 0;
+            int entryTerm = -1;
             SetValueReply reply = new();
+            bool isWaitForCommit = false;
             lock (this)
             {
                 if (this.state.ServerState != ServerState.Leader)
@@ -204,7 +216,6 @@ namespace Raft.Peer.Helpers
                 }
                 else
                 {
-                    reply.IsSucceeded = true;
                     reply.IsLeaderKnown = true;
                     reply.LeaderId = this.settings.ThisPeerId;
                     ConsensusEntry entry = new()
@@ -213,13 +224,45 @@ namespace Raft.Peer.Helpers
                         Index = this.state.PersistentState.Log.Count,
                         Term = this.state.PersistentState.CurrentTerm,
                     };
+                    entryIndex = entry.Index;
+                    entryTerm = entry.Term;
                     this.state.PersistentState.Log.Add(entry);
                     persistenceTask = this.persistence.SaveAsync(this.state.PersistentState);
+                    isWaitForCommit = true;
                 }
             }
-            if (persistenceTask != null)
+            if (isWaitForCommit)
             {
-                await persistenceTask;
+                // busy waiting until committed
+                bool isWorthWaiting()
+                {
+                    lock (this)
+                    {
+                        return
+                            this.state.CommitIndex < entryIndex &&
+                            entryIndex < this.state.PersistentState.Log.Count &&
+                            this.state.PersistentState.Log[entryIndex].Term == entryTerm;
+                    }
+                }
+
+                while (isWorthWaiting())
+                {
+                    // Monitor.Wait(this);
+                    await Task.Delay(TimeSpan.FromMilliseconds(25));
+                }
+
+                lock (this)
+                {
+                    reply.IsSucceeded =
+                        this.state.CommitIndex >= entryIndex &&
+                        entryIndex < this.state.PersistentState.Log.Count &&
+                        this.state.PersistentState.Log[entryIndex].Term == entryTerm;
+                }
+
+                if (persistenceTask != null)
+                {
+                    await persistenceTask;
+                }
             }
             return reply;
         }

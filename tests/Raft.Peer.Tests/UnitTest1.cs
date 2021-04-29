@@ -78,6 +78,18 @@ namespace Raft.Peer.Tests
 
             await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
+            // network is ideal
+            Console.WriteLine("[network] network is ideal");
+            transportationTimeLowBoundMillisecond = 0;
+            transportationTimeHighBoundMillisecond = 0;
+            chanceToDropAPackage = 0;
+
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
+
+            await SubmitAsync(consensusModules);
+
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
+
             // while (true)
             // {
             //     // keep running
@@ -86,21 +98,27 @@ namespace Raft.Peer.Tests
 
         private async Task SubmitAsync(List<ConsensusModule> consensusModules)
         {
-            ConsensusModule consensusModule = consensusModules[0];
+            int previousPeerId = 0;
+            ConsensusModule consensusModule = consensusModules[previousPeerId];
             SetValueReply reply;
+            KeyValuePair<string, int> command = new(previousCommand.Key, previousCommand.Value + 1);
+            this.previousCommand = command;
             do
             {
-                KeyValuePair<string, int> command = new(previousCommand.Key, previousCommand.Value + 1);
                 reply = await consensusModule.SetValueAsync(command);
-                this.previousCommand = command;
                 if (!reply.IsSucceeded)
                 {
                     if (!reply.IsLeaderKnown)
                     {
-                        Console.WriteLine("[submit] leader unknown");
-                        return;
+                        Console.WriteLine($"[submit] peer {previousPeerId} does not know leader. Retry after 1 sec.");
+                        await Task.Delay(TimeSpan.FromMilliseconds(1000));
                     }
-                    consensusModule = consensusModules[reply.LeaderId];
+                    else
+                    {
+                        Console.WriteLine($"[submit] Commit to peer {previousPeerId} failed. Retrying to leader {reply.LeaderId}.");
+                        consensusModule = consensusModules[reply.LeaderId];
+                    }
+                    previousPeerId = reply.LeaderId;
                 }
             } while (!reply.IsSucceeded);
             Console.WriteLine($"[submit] succeeded ({reply.LeaderId})");

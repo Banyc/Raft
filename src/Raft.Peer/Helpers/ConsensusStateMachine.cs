@@ -3,7 +3,7 @@ namespace Raft.Peer.Helpers
 {
     public class ConsensusModuleStatesMachine
     {
-        public Dictionary<string, int> Map { get; set; }
+        public Dictionary<string, int> Map { get; set; } = new();
 
         public void Apply(KeyValuePair<string, int> command)
         {
