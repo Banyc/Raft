@@ -144,15 +144,11 @@ namespace Raft.Peer.Helpers
                                         matchIndexCount++;
                                     }
                                 }
-                                if (tryCommitIndex > this.state.CommitIndex &&
-                                    matchIndexCount > this.settings.PeerCount / 2 &&
-                                    this.state.PersistentState.Log[tryCommitIndex].Term == this.state.PersistentState.CurrentTerm)
+                                if (matchIndexCount > this.settings.PeerCount / 2)
                                 {
                                     this.state.CommitIndex = tryCommitIndex;
                                     // tell client handler that new commit has been made.
                                     // Monitor.PulseAll(this);
-                                    // DEBUG only
-                                    Console.WriteLine("");
                                 }
                                 tryCommitIndex--;
                             }
