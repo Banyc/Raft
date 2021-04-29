@@ -51,6 +51,10 @@ namespace Raft.Peer.Helpers
                     AppendEntriesArgs args;
                     lock (this)
                     {
+                        if (this.state.ServerState == ServerState.Dead)
+                        {
+                            return;
+                        }
                         int prevLogIndex = this.state.NextIndex[followerIndex] - 1;
                         int prevLogTerm = -1;
                         if (prevLogIndex > 0)

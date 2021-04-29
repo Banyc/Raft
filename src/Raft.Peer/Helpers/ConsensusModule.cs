@@ -11,7 +11,7 @@ namespace Raft.Peer.Helpers
 {
     public partial class ConsensusModule
     {
-        private readonly ConsensusModuleStates state = new();
+        private ConsensusModuleStates state;
         // The election timeout is the amount of time a follower waits until becoming a candidate.
         private readonly System.Timers.Timer timerElectionTimeout = new();
         private readonly ConsensusModuleSettings settings;
@@ -34,17 +34,15 @@ namespace Raft.Peer.Helpers
             this.settings = settings;
             this.stateMachine = stateMachine;
             this.persistence = persistence;
-
             // timer {
             this.timerElectionTimeout.AutoReset = false;
-
             this.timerElectionTimeout.Elapsed += TimerElectionTimeout_Elapsed;
-
             // }
         }
 
         public async Task StartAsync()
         {
+            this.state = new();
             var persistentState = await persistence.LoadAsync();
             if (persistentState != default)
             {

@@ -221,5 +221,14 @@ namespace Raft.Peer.Helpers
             }
             return reply;
         }
+
+        public void Crash()
+        {
+            lock (this)
+            {
+                this.timerElectionTimeout.Stop();
+                this.state.ServerState = ServerState.Dead;
+            }
+        }
     }
 }
