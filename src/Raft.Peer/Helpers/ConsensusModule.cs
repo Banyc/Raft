@@ -22,11 +22,17 @@ namespace Raft.Peer.Helpers
         // public delegate AppendEntriesReply AppendEntriesEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments);
         // public event AppendEntriesEventHandler SendAppendEntries;
         public delegate Task<AppendEntriesReply> AppendEntriesAsyncEventHandler(ConsensusModule sender, int targetPeerId, AppendEntriesArgs arguments, CancellationToken cancellationToken);
+        /// <summary>
+        /// return null if timeout
+        /// </summary>
         public event AppendEntriesAsyncEventHandler SendAppendEntriesAsync;
 
         // public delegate RequestVoteReply RequestVoteEventHandler(ConsensusModule sender, int targetPeerId, RequestVoteArgs arguments);
         // public event RequestVoteEventHandler SendRequestVote;
         public delegate Task<RequestVoteReply> RequestVoteAsyncEventHandler(ConsensusModule sender, int targetPeerId, RequestVoteArgs arguments, CancellationToken cancellationToken);
+        /// <summary>
+        /// return null if timeout
+        /// </summary>
         public event RequestVoteAsyncEventHandler SendRequestVoteAsync;
 
         public ConsensusModule(ConsensusModuleSettings settings, ConsensusModuleStatesMachine stateMachine, JsonPersistence<ConsensusModulePersistentState> persistence)
@@ -113,6 +119,9 @@ namespace Raft.Peer.Helpers
             this.state.ServerState = ServerState.Follower;
             this.state.PersistentState.CurrentTerm = newTerm;
             // stop heartbeat
+
+            // notify client handler to cancel commit
+            Monitor.PulseAll(this);
         }
 
         private void UpdateStateMachine()

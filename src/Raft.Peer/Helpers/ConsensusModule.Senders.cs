@@ -59,6 +59,7 @@ namespace Raft.Peer.Helpers
                         int prevLogTerm = -1;
                         if (prevLogIndex > 0)
                         {
+                            // bug fixed: prevLogIndex could be bigger than the log size
                             prevLogTerm = this.state.PersistentState.Log[prevLogIndex].Term;
                         }
                         args = new()
@@ -94,6 +95,11 @@ namespace Raft.Peer.Helpers
                         // timeout
                         break;
                     }
+                    if (reply == null)
+                    {
+                        // outer timeout before the token raises TaskCanceledException
+                        break;
+                    }
                     lock (this)
                     {
                         if (reply.Term > this.state.PersistentState.CurrentTerm)
@@ -113,9 +119,10 @@ namespace Raft.Peer.Helpers
                         }
                         if (reply.Success)
                         {
-                            // this.state.NextIndex[followerIndex] += args.Entries.Count;
-                            this.state.NextIndex[followerIndex] = reply.MatchIndex + 1;
-                            this.state.MatchIndex[followerIndex] = this.state.NextIndex[followerIndex] - 1;
+                            // the request might be out of dated. Thus causing the outdated reply.
+                            // this reply.MatchIndex might smaller than the previous reply.MatchIndex due to the outdatedness.
+                            this.state.MatchIndex[followerIndex] = Math.Max(reply.MatchIndex, this.state.MatchIndex[followerIndex]);
+                            this.state.NextIndex[followerIndex] = this.state.MatchIndex[followerIndex] + 1;
 
                             // leader commits
                             while (true)
@@ -135,6 +142,8 @@ namespace Raft.Peer.Helpers
                                     this.state.PersistentState.Log[newCommitIndex].Term == this.state.PersistentState.CurrentTerm)
                                 {
                                     this.state.CommitIndex = newCommitIndex;
+                                    // tell client handler that new commit has been made.
+                                    Monitor.PulseAll(this);
                                 }
                                 else
                                 {

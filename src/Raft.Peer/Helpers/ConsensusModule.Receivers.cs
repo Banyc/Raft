@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
@@ -93,7 +94,7 @@ namespace Raft.Peer.Helpers
                             this.state.PersistentState.Log.Count - 1);
                     }
 
-                    result.MatchIndex = this.state.PersistentState.Log.Count - 1;
+                    result.MatchIndex = arguments.PrevLogIndex + arguments.Entries.Count;
                 }
 
                 // update state machine
@@ -188,6 +189,7 @@ namespace Raft.Peer.Helpers
         public async Task<SetValueReply> SetValueAsync(KeyValuePair<string, int> command)
         {
             Task persistenceTask = null;
+            int entryIndex = 0;
             SetValueReply reply = new();
             lock (this)
             {
