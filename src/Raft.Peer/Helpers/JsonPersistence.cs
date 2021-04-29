@@ -19,7 +19,19 @@ namespace Raft.Peer.Helpers
                 WriteIndented = true
             };
             var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(dataObject, options);
-            await File.WriteAllBytesAsync(this.settings.PersistenceFilePath, bytes);
+            bool isWritten = false;
+            do
+            {
+                try
+                {
+                    await File.WriteAllBytesAsync(this.settings.PersistenceFilePath, bytes);
+                    isWritten = true;
+                }
+                catch (IOException)
+                {
+
+                }
+            } while (isWritten == false);
         }
 
         public async Task<T> LoadAsync()
