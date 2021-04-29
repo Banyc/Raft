@@ -202,6 +202,7 @@ namespace Raft.Peer.Helpers
             int entryIndex = 0;
             int entryTerm = -1;
             SetValueReply reply = new();
+            reply.IsCommitInFutureUnclear = false;
             bool isWaitForCommit = false;
             lock (this)
             {
@@ -240,6 +241,7 @@ namespace Raft.Peer.Helpers
                     {
                         return
                             this.state.CommitIndex < entryIndex &&
+                            this.state.PersistentState.CurrentTerm == entryTerm &&
                             entryIndex < this.state.PersistentState.Log.Count &&
                             this.state.PersistentState.Log[entryIndex].Term == entryTerm;
                     }
@@ -253,8 +255,15 @@ namespace Raft.Peer.Helpers
 
                 lock (this)
                 {
+                    // TODO:
+                    if (this.state.PersistentState.CurrentTerm != entryTerm)
+                    {
+                        // not sure if it will be committed or not.
+                        reply.IsCommitInFutureUnclear = true;
+                    }
                     reply.IsSucceeded =
                         this.state.CommitIndex >= entryIndex &&
+                        this.state.PersistentState.CurrentTerm == entryTerm &&
                         entryIndex < this.state.PersistentState.Log.Count &&
                         this.state.PersistentState.Log[entryIndex].Term == entryTerm;
                 }

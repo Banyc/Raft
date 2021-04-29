@@ -118,9 +118,14 @@ namespace Raft.Peer.Tests
                         Console.WriteLine($"[submit] Commit to peer {previousPeerId} failed. Retrying to leader {reply.LeaderId}.");
                         consensusModule = consensusModules[reply.LeaderId];
                     }
+                    if (reply.IsCommitInFutureUnclear)
+                    {
+                        Console.WriteLine("[submit] Term has changed before commit. Stop retrying.");
+                        return;
+                    }
                     previousPeerId = reply.LeaderId;
                 }
-            } while (!reply.IsSucceeded);
+            } while (!reply.IsSucceeded && !reply.IsCommitInFutureUnclear);
             Console.WriteLine($"[submit] succeeded ({reply.LeaderId})");
         }
 
