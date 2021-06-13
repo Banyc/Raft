@@ -42,3 +42,4 @@ In this lab you'll implement Raft as a Go object type with associated methods, m
 -   lastLogIndex of the requestVote RPC arguments from Candidate sometimes become 0.
     -   due to a wrong condition of log removal
     -   fixed
+-   `SubmitAsync` sometimes blocks forever.
